@@ -1,347 +1,458 @@
-import logging
-import time
+"""
+Service pour l'analyse des fichiers FEC et la détection d'anomalies.
+"""
 import os
 import json
-import uuid
+import logging
 import asyncio
-from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
+from typing import List, Dict, Any, Optional, Tuple
+import uuid
+import time
 from functools import lru_cache
 
-from backend.core.config import get_settings
 from backend.models.schemas import (
-    Anomaly, AnomalyResponse, AnalysisJobStatus, AnalysisStatus, FileUploadResponse
+    Anomaly, AnomalyResponse, AnalysisJobStatus, AnalysisType, 
+    FileUploadResponse, PaginationParams, AnalysisStatus
 )
 from backend.models.anomaly_detector import AnomalyDetector, get_anomaly_detector
-from backend.utils.file_handling import read_fec_file, delete_file
+from backend.core.config import get_settings
+from backend.core.errors import ResourceNotFoundError, FileProcessingError
+from backend.utils.file_handling import read_file_content
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
 class AnalysisService:
-    """Service pour gérer les analyses de fichiers FEC"""
+    """Service d'analyse des fichiers comptables"""
     
-    def __init__(self, anomaly_detector: AnomalyDetector):
-        self.anomaly_detector = anomaly_detector
-        self.files_dir = os.path.join(settings.DATA_DIR, "files")
-        self.jobs_dir = os.path.join(settings.DATA_DIR, "jobs")
-        self.results_dir = os.path.join(settings.DATA_DIR, "results")
+    def __init__(self, anomaly_detector: Optional[AnomalyDetector] = None):
+        """
+        Initialise le service d'analyse
         
-        # Création des répertoires nécessaires
-        os.makedirs(self.files_dir, exist_ok=True)
-        os.makedirs(self.jobs_dir, exist_ok=True)
+        Args:
+            anomaly_detector: Détecteur d'anomalies à utiliser (optionnel)
+        """
+        self.anomaly_detector = anomaly_detector or get_anomaly_detector()
+        self.data_dir = settings.DATA_DIR
+        
+        # Répertoires spécifiques
+        self.uploads_dir = os.path.join(self.data_dir, "uploads")
+        self.results_dir = os.path.join(self.data_dir, "results")
+        self.jobs_dir = os.path.join(self.data_dir, "jobs")
+        
+        # Créer les répertoires s'ils n'existent pas
+        os.makedirs(self.uploads_dir, exist_ok=True)
         os.makedirs(self.results_dir, exist_ok=True)
+        os.makedirs(self.jobs_dir, exist_ok=True)
         
         # Pour gérer les jobs en cours
         self._running_jobs = {}
+    
+    async def register_file(self, 
+                    file_id: str, 
+                    filename: str, 
+                    file_path: str, 
+                    file_size: int, 
+                    description: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Enregistre les métadonnées d'un fichier uploadé
         
-    async def register_file(
-        self, 
-        file_id: str, 
-        filename: str, 
-        file_path: str, 
-        file_size: int,
-        description: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """Enregistre les métadonnées d'un fichier uploadé"""
+        Args:
+            file_id: Identifiant unique du fichier
+            filename: Nom original du fichier
+            file_path: Chemin d'accès au fichier
+            file_size: Taille du fichier en octets
+            description: Description optionnelle du fichier
+        
+        Returns:
+            Dictionnaire des métadonnées du fichier
+        """
+        # Créer les métadonnées du fichier
         file_data = {
             "file_id": file_id,
             "filename": filename,
-            "original_path": file_path,
-            "size_bytes": file_size,
+            "file_path": file_path,
+            "file_size": file_size,
             "upload_timestamp": datetime.now().isoformat(),
-            "description": description,
-            "status": "uploaded"
+            "description": description or "",
+            "status": "uploaded",
+            "analyses": []
         }
         
-        # Sauvegarde des métadonnées
-        file_metadata_path = os.path.join(self.files_dir, f"{file_id}.json")
-        with open(file_metadata_path, "w", encoding="utf-8") as f:
-            json.dump(file_data, f, ensure_ascii=False, indent=2)
+        # Enregistrer les métadonnées
+        metadata_path = os.path.join(self.uploads_dir, f"{file_id}_meta.json")
+        with open(metadata_path, "w", encoding="utf-8") as f:
+            json.dump(file_data, f, indent=2, ensure_ascii=False)
         
+        logger.info(f"Métadonnées du fichier {file_id} enregistrées")
         return file_data
     
     async def file_exists(self, file_id: str) -> bool:
-        """Vérifie si un fichier existe"""
-        file_metadata_path = os.path.join(self.files_dir, f"{file_id}.json")
-        return os.path.exists(file_metadata_path)
+        """
+        Vérifie si un fichier existe
+        
+        Args:
+            file_id: Identifiant du fichier
+            
+        Returns:
+            True si le fichier existe, False sinon
+        """
+        metadata_path = os.path.join(self.uploads_dir, f"{file_id}_meta.json")
+        return os.path.exists(metadata_path)
     
     async def get_file_metadata(self, file_id: str) -> Optional[Dict[str, Any]]:
-        """Récupère les métadonnées d'un fichier"""
-        if not await self.file_exists(file_id):
-            return None
+        """
+        Récupère les métadonnées d'un fichier
+        
+        Args:
+            file_id: Identifiant du fichier
             
-        file_metadata_path = os.path.join(self.files_dir, f"{file_id}.json")
-        with open(file_metadata_path, "r", encoding="utf-8") as f:
+        Returns:
+            Métadonnées du fichier ou None si introuvable
+        """
+        metadata_path = os.path.join(self.uploads_dir, f"{file_id}_meta.json")
+        
+        if not os.path.exists(metadata_path):
+            return None
+        
+        with open(metadata_path, "r", encoding="utf-8") as f:
             return json.load(f)
     
-    async def create_analysis_job(
-        self, 
-        file_id: str, 
-        analysis_type: str = "standard",
-        options: Optional[Dict[str, Any]] = None
-    ) -> AnalysisJobStatus:
-        """Crée une nouvelle tâche d'analyse"""
+    async def create_analysis_job(self, 
+                          file_id: str, 
+                          analysis_type: AnalysisType, 
+                          options: Optional[Dict[str, Any]] = None) -> AnalysisJobStatus:
+        """
+        Crée une tâche d'analyse
+        
+        Args:
+            file_id: Identifiant du fichier à analyser
+            analysis_type: Type d'analyse à effectuer
+            options: Options supplémentaires pour l'analyse
+            
+        Returns:
+            Statut initial de la tâche
+        """
+        # Vérifier que le fichier existe
+        if not await self.file_exists(file_id):
+            raise ResourceNotFoundError("Fichier", file_id)
+        
+        # Créer un identifiant unique pour la tâche
         job_id = str(uuid.uuid4())
         
-        # Obtenir les métadonnées du fichier
-        file_metadata = await self.get_file_metadata(file_id)
-        if not file_metadata:
-            raise ValueError(f"Fichier avec l'ID {file_id} introuvable")
+        # Créer les données de la tâche
+        job_data = {
+            "job_id": job_id,
+            "file_id": file_id,
+            "analysis_type": analysis_type.value,
+            "options": options or {},
+            "status": "pending",
+            "created_at": datetime.now().isoformat(),
+            "started_at": None,
+            "completed_at": None,
+            "error": None,
+            "result_path": None,
+            "progress": 0
+        }
         
-        # Création du statut initial de la tâche
-        job_status = AnalysisJobStatus(
+        # Enregistrer les données de la tâche
+        job_path = os.path.join(self.jobs_dir, f"{job_id}.json")
+        with open(job_path, "w", encoding="utf-8") as f:
+            json.dump(job_data, f, indent=2, ensure_ascii=False)
+        
+        logger.info(f"Tâche d'analyse {job_id} créée pour le fichier {file_id}")
+        
+        return AnalysisJobStatus(
             job_id=job_id,
             file_id=file_id,
             status=AnalysisStatus.PENDING,
-            progress=0.0,
-            message="Initialisation de l'analyse",
-            started_at=datetime.now(),
+            progress=0,
+            created_at=datetime.now(),
+            started_at=None,
             completed_at=None,
-            result_url=None
+            error=None,
+            result_path=None
         )
-        
-        # Sauvegarde du statut initial
-        job_status_path = os.path.join(self.jobs_dir, f"{job_id}.json")
-        with open(job_status_path, "w", encoding="utf-8") as f:
-            json.dump(job_status.dict(), f, ensure_ascii=False, indent=2)
-        
-        return job_status
     
-    async def update_job_status(
-        self,
-        job_id: str,
-        status: Optional[AnalysisStatus] = None,
-        progress: Optional[float] = None,
-        message: Optional[str] = None,
-        completed_at: Optional[datetime] = None,
-        result_url: Optional[str] = None
-    ) -> AnalysisJobStatus:
-        """Met à jour le statut d'une tâche d'analyse"""
-        # Charger le statut actuel
-        job_status_path = os.path.join(self.jobs_dir, f"{job_id}.json")
-        with open(job_status_path, "r", encoding="utf-8") as f:
-            current_status_dict = json.load(f)
+    async def run_analysis_job(self, job_id: str) -> AnalysisJobStatus:
+        """
+        Exécute une tâche d'analyse
         
-        # Convertir en objet AnalysisJobStatus
-        current_status = AnalysisJobStatus(**current_status_dict)
+        Args:
+            job_id: Identifiant de la tâche
+            
+        Returns:
+            Statut final de la tâche
+        """
+        # Récupérer les données de la tâche
+        job_path = os.path.join(self.jobs_dir, f"{job_id}.json")
         
-        # Mettre à jour les champs si fournis
-        if status is not None:
-            current_status.status = status
-        if progress is not None:
-            current_status.progress = progress
-        if message is not None:
-            current_status.message = message
-        if completed_at is not None:
-            current_status.completed_at = completed_at
-        if result_url is not None:
-            current_status.result_url = result_url
+        if not os.path.exists(job_path):
+            raise ResourceNotFoundError("Tâche d'analyse", job_id)
         
-        # Sauvegarder les modifications
-        with open(job_status_path, "w", encoding="utf-8") as f:
-            json.dump(current_status.dict(), f, ensure_ascii=False, indent=2)
+        with open(job_path, "r", encoding="utf-8") as f:
+            job_data = json.load(f)
         
-        return current_status
-    
-    async def get_analysis_job_status(self, job_id: str) -> Optional[AnalysisJobStatus]:
-        """Récupère le statut d'une tâche d'analyse"""
-        job_status_path = os.path.join(self.jobs_dir, f"{job_id}.json")
-        if not os.path.exists(job_status_path):
-            return None
+        # Mettre à jour le statut
+        job_data["status"] = "processing"
+        job_data["started_at"] = datetime.now().isoformat()
         
-        with open(job_status_path, "r", encoding="utf-8") as f:
-            job_status_dict = json.load(f)
+        # Sauvegarder l'état initial
+        with open(job_path, "w", encoding="utf-8") as f:
+            json.dump(job_data, f, indent=2, ensure_ascii=False)
         
-        return AnalysisJobStatus(**job_status_dict)
-    
-    async def run_analysis_job(self, job_id: str) -> None:
-        """Exécute une analyse en arrière-plan"""
         try:
-            # Récupérer le statut initial
-            job_status = await self.get_analysis_job_status(job_id)
-            if not job_status:
-                logger.error(f"Tâche d'analyse {job_id} introuvable")
-                return
-            
             # Récupérer les métadonnées du fichier
-            file_metadata = await self.get_file_metadata(job_status.file_id)
-            if not file_metadata:
-                logger.error(f"Fichier {job_status.file_id} introuvable")
-                await self.update_job_status(
-                    job_id=job_id,
-                    status=AnalysisStatus.FAILED,
-                    message="Fichier introuvable",
-                    completed_at=datetime.now()
-                )
-                return
+            file_id = job_data["file_id"]
+            metadata = await self.get_file_metadata(file_id)
             
-            # Marquer comme en cours de traitement
-            await self.update_job_status(
-                job_id=job_id,
-                status=AnalysisStatus.PROCESSING,
-                progress=0.1,
-                message="Chargement du fichier FEC"
-            )
+            if not metadata:
+                raise ResourceNotFoundError("Fichier", file_id)
             
-            # Enregistrer le job en cours
-            self._running_jobs[job_id] = {
-                "start_time": time.time(),
-                "file_id": job_status.file_id
-            }
+            file_path = metadata["file_path"]
             
-            # Charger le fichier FEC
-            file_path = file_metadata.get("original_path")
-            if not os.path.exists(file_path):
-                logger.error(f"Fichier physique {file_path} introuvable")
-                await self.update_job_status(
-                    job_id=job_id,
-                    status=AnalysisStatus.FAILED,
-                    message="Fichier physique introuvable",
-                    completed_at=datetime.now()
-                )
-                return
+            # Mettre à jour la progression
+            job_data["progress"] = 10
+            with open(job_path, "w", encoding="utf-8") as f:
+                json.dump(job_data, f, indent=2, ensure_ascii=False)
             
-            # Pour les fichiers volumineux, utiliser un traitement par lots
-            await self.update_job_status(
-                job_id=job_id,
-                progress=0.2,
-                message="Prétraitement des données"
-            )
+            # Charger le contenu du fichier
+            logger.info(f"Chargement du fichier {file_path}")
+            entries = await read_file_content(file_path)
             
-            # Simuler le traitement par lots pour les fichiers volumineux
-            fec_entries = await read_fec_file(file_path)
+            # Mettre à jour la progression
+            job_data["progress"] = 30
+            with open(job_path, "w", encoding="utf-8") as f:
+                json.dump(job_data, f, indent=2, ensure_ascii=False)
             
-            # Progression de l'analyse
-            await self.update_job_status(
-                job_id=job_id,
-                progress=0.4,
-                message="Analyse en cours"
-            )
+            # Détecter les anomalies
+            logger.info(f"Détection d'anomalies sur {len(entries)} entrées")
             
-            # Traitement par le détecteur d'anomalies
-            start_time = time.time()
-            anomalies = await self.anomaly_detector.detect_anomalies(fec_entries)
-            analysis_duration_ms = (time.time() - start_time) * 1000
+            # Mettre à jour la progression
+            job_data["progress"] = 50
+            with open(job_path, "w", encoding="utf-8") as f:
+                json.dump(job_data, f, indent=2, ensure_ascii=False)
             
-            # Création du résultat
+            # Effectuer la détection
+            detector = get_anomaly_detector()
+            anomalies = await detector.detect_anomalies(entries)
+            
+            # Mettre à jour la progression
+            job_data["progress"] = 80
+            with open(job_path, "w", encoding="utf-8") as f:
+                json.dump(job_data, f, indent=2, ensure_ascii=False)
+            
+            # Créer le résultat
             result = AnomalyResponse(
+                file_id=file_id,
+                filename=metadata["filename"],
+                total_entries=len(entries),
+                anomaly_count=len(anomalies),
                 anomalies=anomalies,
-                total_count=len(anomalies),
-                file_id=job_status.file_id,
-                analysis_duration_ms=analysis_duration_ms
+                analysis_timestamp=datetime.now(),
+                processing_time_ms=int((datetime.now() - datetime.fromisoformat(job_data["started_at"])).total_seconds() * 1000)
             )
             
-            # Sauvegarde des résultats
-            result_path = os.path.join(self.results_dir, f"{job_status.file_id}.json")
+            # Sauvegarder le résultat
+            result_path = os.path.join(self.results_dir, f"{file_id}.json")
             with open(result_path, "w", encoding="utf-8") as f:
-                json.dump(result.dict(), f, ensure_ascii=False, indent=2)
+                # Correction ici: d'abord convertir en dict puis utiliser json.dump
+                import json
+                result_dict = result.model_dump()
+                json.dump(result_dict, f, indent=2, ensure_ascii=False)
             
-            # Mise à jour du statut comme terminé
-            result_url = f"/api/v1/analysis/results/{job_status.file_id}"
-            await self.update_job_status(
-                job_id=job_id,
-                status=AnalysisStatus.COMPLETED,
-                progress=1.0,
-                message=f"Analyse terminée, {len(anomalies)} anomalies détectées",
-                completed_at=datetime.now(),
-                result_url=result_url
-            )
+            # Mettre à jour le statut de la tâche
+            job_data["status"] = "completed"
+            job_data["completed_at"] = datetime.now().isoformat()
+            job_data["result_path"] = result_path
+            job_data["progress"] = 100
             
-            logger.info(f"Analyse {job_id} terminée avec succès: {len(anomalies)} anomalies détectées")
+            # Ajouter l'analyse aux métadonnées du fichier
+            metadata["analyses"].append({
+                "job_id": job_id,
+                "analysis_type": job_data["analysis_type"],
+                "timestamp": datetime.now().isoformat(),
+                "anomaly_count": len(anomalies)
+            })
+            
+            # Mettre à jour les métadonnées du fichier
+            metadata_path = os.path.join(self.uploads_dir, f"{file_id}_meta.json")
+            with open(metadata_path, "w", encoding="utf-8") as f:
+                json.dump(metadata, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"Analyse {job_id} terminée: {len(anomalies)} anomalies détectées")
             
         except Exception as e:
+            # En cas d'erreur, mettre à jour le statut
+            job_data["status"] = "failed"
+            job_data["error"] = str(e)
             logger.error(f"Erreur lors de l'analyse {job_id}: {str(e)}", exc_info=e)
-            try:
-                await self.update_job_status(
-                    job_id=job_id,
-                    status=AnalysisStatus.FAILED,
-                    message=f"Erreur: {str(e)}",
-                    completed_at=datetime.now()
-                )
-            except Exception as update_error:
-                logger.error(f"Erreur lors de la mise à jour du statut pour {job_id}: {str(update_error)}")
+        
         finally:
-            # Supprimer des jobs en cours
-            if job_id in self._running_jobs:
-                del self._running_jobs[job_id]
+            # Sauvegarder l'état final
+            with open(job_path, "w", encoding="utf-8") as f:
+                json.dump(job_data, f, indent=2, ensure_ascii=False)
+        
+        return await self.get_analysis_job_status(job_id)
+    
+    async def get_analysis_job_status(self, job_id: str) -> Optional[AnalysisJobStatus]:
+        """
+        Récupère le statut d'une tâche d'analyse
+        
+        Args:
+            job_id: Identifiant de la tâche
+            
+        Returns:
+            Statut de la tâche ou None si introuvable
+        """
+        job_path = os.path.join(self.jobs_dir, f"{job_id}.json")
+        
+        if not os.path.exists(job_path):
+            return None
+        
+        with open(job_path, "r", encoding="utf-8") as f:
+            job_data = json.load(f)
+        
+        # Convertir les chaînes ISO en objets datetime
+        created_at = datetime.fromisoformat(job_data["created_at"])
+        started_at = datetime.fromisoformat(job_data["started_at"]) if job_data["started_at"] else None  
+        completed_at = datetime.fromisoformat(job_data["completed_at"]) if job_data["completed_at"] else None
+        
+        # Convertir le statut en AnalysisStatus
+        status_map = {
+            "pending": AnalysisStatus.PENDING,
+            "processing": AnalysisStatus.PROCESSING,
+            "completed": AnalysisStatus.COMPLETED,
+            "failed": AnalysisStatus.FAILED
+        }
+        status = status_map.get(job_data["status"], AnalysisStatus.PENDING)
+        
+        return AnalysisJobStatus(
+            job_id=job_data["job_id"],
+            file_id=job_data["file_id"],
+            status=status,
+            progress=job_data["progress"],
+            created_at=created_at,
+            started_at=started_at,
+            completed_at=completed_at,
+            error=job_data["error"],
+            result_path=job_data["result_path"]
+        )
     
     async def get_analysis_results(self, file_id: str) -> Optional[AnomalyResponse]:
-        """Récupère les résultats d'une analyse"""
+        """
+        Récupère les résultats d'analyse pour un fichier
+        
+        Args:
+            file_id: Identifiant du fichier
+            
+        Returns:
+            Résultats d'analyse ou None si introuvable
+        """
         result_path = os.path.join(self.results_dir, f"{file_id}.json")
+        
         if not os.path.exists(result_path):
             return None
         
         with open(result_path, "r", encoding="utf-8") as f:
-            result_dict = json.load(f)
+            result_json = json.load(f)
         
-        return AnomalyResponse(**result_dict)
+        # Convertir le JSON en objet AnomalyResponse
+        return AnomalyResponse(**result_json)
     
     async def list_files(self, page: int = 1, page_size: int = 20) -> List[FileUploadResponse]:
-        """Liste les fichiers uploadés avec pagination"""
-        # Récupérer tous les fichiers de métadonnées
-        files = []
-        for filename in os.listdir(self.files_dir):
-            if filename.endswith(".json"):
-                with open(os.path.join(self.files_dir, filename), "r", encoding="utf-8") as f:
-                    file_data = json.load(f)
-                    # Convertir le timestamp en datetime
-                    upload_timestamp = datetime.fromisoformat(file_data["upload_timestamp"])
-                    
-                    files.append(FileUploadResponse(
-                        file_id=file_data["file_id"],
-                        filename=file_data["filename"],
-                        size_bytes=file_data["size_bytes"],
-                        upload_timestamp=upload_timestamp,
-                        content_type="application/fec",  # Supposant un type de contenu FEC
-                        status=file_data.get("status", "uploaded"),
-                        message=file_data.get("description")
-                    ))
+        """
+        Liste les fichiers uploadés avec pagination
         
-        # Trier par date d'upload (plus récent en premier)
+        Args:
+            page: Numéro de page (commence à 1)
+            page_size: Nombre d'éléments par page
+            
+        Returns:
+            Liste des métadonnées des fichiers
+        """
+        # Récupérer les fichiers de métadonnées
+        files = []
+        for filename in os.listdir(self.uploads_dir):
+            if filename.endswith("_meta.json"):
+                file_path = os.path.join(self.uploads_dir, filename)
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        file_data = json.load(f)
+                        
+                        files.append(FileUploadResponse(
+                            file_id=file_data["file_id"],
+                            filename=file_data["filename"],
+                            size_bytes=file_data["file_size"],
+                            upload_timestamp=datetime.fromisoformat(file_data["upload_timestamp"]),
+                            content_type="application/octet-stream",  # À améliorer si nécessaire
+                            status=file_data["status"],
+                            message=""
+                        ))
+                except Exception as e:
+                    logger.error(f"Erreur lors de la lecture des métadonnées {file_path}: {str(e)}")
+        
+        # Trier par date d'upload (plus récent d'abord)
         files.sort(key=lambda x: x.upload_timestamp, reverse=True)
         
-        # Calculer l'offset et retourner la page demandée
+        # Pagination
         start_idx = (page - 1) * page_size
         end_idx = start_idx + page_size
         
         return files[start_idx:end_idx]
     
     async def delete_file(self, file_id: str) -> bool:
-        """Supprime un fichier et ses analyses associées"""
-        file_metadata = await self.get_file_metadata(file_id)
-        if not file_metadata:
-            return False
+        """
+        Supprime un fichier et ses analyses associées
+        
+        Args:
+            file_id: Identifiant du fichier
+            
+        Returns:
+            True si la suppression a réussi
+        """
+        # Vérifier que le fichier existe
+        metadata_path = os.path.join(self.uploads_dir, f"{file_id}_meta.json")
+        
+        if not os.path.exists(metadata_path):
+            raise ResourceNotFoundError("Fichier", file_id)
+        
+        # Récupérer les métadonnées
+        with open(metadata_path, "r", encoding="utf-8") as f:
+            metadata = json.load(f)
         
         # Supprimer le fichier physique
-        file_path = file_metadata.get("original_path")
-        if os.path.exists(file_path):
+        file_path = metadata.get("file_path")
+        if file_path and os.path.exists(file_path):  # Correction ici: remplacé & par and
             os.remove(file_path)
         
         # Supprimer les métadonnées
-        metadata_path = os.path.join(self.files_dir, f"{file_id}.json")
-        if os.path.exists(metadata_path):
-            os.remove(metadata_path)
+        os.remove(metadata_path)
         
         # Supprimer les résultats d'analyse
-        results_path = os.path.join(self.results_dir, f"{file_id}.json")
-        if os.path.exists(results_path):
-            os.remove(results_path)
+        result_path = os.path.join(self.results_dir, f"{file_id}.json")
+        if os.path.exists(result_path):
+            os.remove(result_path)
         
-        # Supprimer les jobs associés (si nécessaire)
-        for filename in os.listdir(self.jobs_dir):
-            if filename.endswith(".json"):
-                job_path = os.path.join(self.jobs_dir, filename)
-                with open(job_path, "r", encoding="utf-8") as f:
-                    job_data = json.load(f)
-                    if job_data.get("file_id") == file_id:
-                        os.remove(job_path)
+        # Supprimer les tâches d'analyse associées
+        for job_id in [job.get("job_id") for job in metadata.get("analyses", [])]:
+            job_path = os.path.join(self.jobs_dir, f"{job_id}.json")
+            if os.path.exists(job_path):
+                os.remove(job_path)
         
+        logger.info(f"Fichier {file_id} et données associées supprimés")
         return True
 
 
 @lru_cache()
 def get_analysis_service() -> AnalysisService:
-    """Singleton pour récupérer le service d'analyse"""
-    return AnalysisService(get_anomaly_detector())
+    """
+    Récupère l'instance unique du service d'analyse
+    
+    Returns:
+        Instance du service d'analyse
+    """
+    return AnalysisService()
+

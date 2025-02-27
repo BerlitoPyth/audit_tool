@@ -1,0 +1,141 @@
+2025-02-26 20:44:00,198 - root - INFO - main.py:31 - Démarrage de l'application d'audit financier
+2025-02-26 20:44:00,198 - root - INFO - main.py:32 - Mode DEBUG: True
+2025-02-26 20:44:00,198 - root - INFO - main.py:35 - Initialisation des ressources...
+2025-02-26 20:44:10,944 - root - DEBUG - main.py:61 - Incoming request: GET http://localhost:8000/api/v1/analysis/files
+2025-02-26 20:44:10,945 - root - DEBUG - main.py:63 - Headers: {'host': 'localhost:8000', 'connection': 'keep-alive', 'sec-ch-ua-platform': '"Windows"', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36', 'accept': 'application/json', 'sec-ch-ua': '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"', 'sec-ch-ua-mobile': '?0', 'origin': 'http://localhost:3001', 'sec-fetch-site': 'same-site', 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty', 'referer': 'http://localhost:3001/', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7'}
+2025-02-26 20:44:10,950 - backend.models.anomaly_detector - INFO - anomaly_detector.py:20 - Initialisation du détecteur d'anomalies
+2025-02-26 20:44:10,950 - backend.services.analysis_service - INFO - analysis_service.py:35 - Dossier créé/vérifié : C:\Users\berli\OneDrive\Bureau\audit_tool_clean\audit_tool\backend\data\files
+2025-02-26 20:44:10,950 - backend.services.analysis_service - INFO - analysis_service.py:35 - Dossier créé/vérifié : C:\Users\berli\OneDrive\Bureau\audit_tool_clean\audit_tool\backend\data\jobs
+2025-02-26 20:44:10,951 - backend.services.analysis_service - INFO - analysis_service.py:35 - Dossier créé/vérifié : C:\Users\berli\OneDrive\Bureau\audit_tool_clean\audit_tool\backend\data\results
+2025-02-26 20:44:10,952 - root - DEBUG - main.py:67 - Response status: 200
+2025-02-26 20:44:10,952 - root - DEBUG - main.py:69 - Response headers: {'content-length': '688', 'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-expose-headers': '*'}
+2025-02-26 20:44:10,955 - root - DEBUG - main.py:61 - Incoming request: GET http://localhost:8000/api/v1/analysis/files
+2025-02-26 20:44:10,955 - root - DEBUG - main.py:63 - Headers: {'host': 'localhost:8000', 'connection': 'keep-alive', 'sec-ch-ua-platform': '"Windows"', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36', 'accept': 'application/json', 'sec-ch-ua': '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"', 'sec-ch-ua-mobile': '?0', 'origin': 'http://localhost:3001', 'sec-fetch-site': 'same-site', 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty', 'referer': 'http://localhost:3001/', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7'}
+2025-02-26 20:44:10,958 - root - DEBUG - main.py:67 - Response status: 200
+2025-02-26 20:44:10,958 - root - DEBUG - main.py:69 - Response headers: {'content-length': '688', 'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-expose-headers': '*'}
+2025-02-26 20:44:12,105 - root - DEBUG - main.py:61 - Incoming request: GET http://localhost:8000/api/v1/analysis/files
+2025-02-26 20:44:12,105 - root - DEBUG - main.py:63 - Headers: {'host': 'localhost:8000', 'connection': 'keep-alive', 'sec-ch-ua-platform': '"Windows"', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36', 'accept': 'application/json', 'sec-ch-ua': '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"', 'sec-ch-ua-mobile': '?0', 'origin': 'http://localhost:3001', 'sec-fetch-site': 'same-site', 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty', 'referer': 'http://localhost:3001/', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7'}
+2025-02-26 20:44:12,107 - root - DEBUG - main.py:67 - Response status: 200
+2025-02-26 20:44:12,108 - root - DEBUG - main.py:69 - Response headers: {'content-length': '688', 'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-expose-headers': '*'}
+2025-02-26 20:44:12,110 - root - DEBUG - main.py:61 - Incoming request: GET http://localhost:8000/api/v1/analysis/files
+2025-02-26 20:44:12,110 - root - DEBUG - main.py:63 - Headers: {'host': 'localhost:8000', 'connection': 'keep-alive', 'sec-ch-ua-platform': '"Windows"', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36', 'accept': 'application/json', 'sec-ch-ua': '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"', 'sec-ch-ua-mobile': '?0', 'origin': 'http://localhost:3001', 'sec-fetch-site': 'same-site', 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty', 'referer': 'http://localhost:3001/', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7'}
+2025-02-26 20:44:12,112 - root - DEBUG - main.py:67 - Response status: 200
+2025-02-26 20:44:12,113 - root - DEBUG - main.py:69 - Response headers: {'content-length': '688', 'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-expose-headers': '*'}
+2025-02-26 20:44:12,113 - root - DEBUG - main.py:61 - Incoming request: GET http://localhost:8000/api/v1/analysis/results/f8fb5da1-66ee-431d-b4f4-87cfa752b9fd
+2025-02-26 20:44:12,113 - root - DEBUG - main.py:63 - Headers: {'host': 'localhost:8000', 'connection': 'keep-alive', 'sec-ch-ua-platform': '"Windows"', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36', 'accept': 'application/json', 'sec-ch-ua': '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"', 'sec-ch-ua-mobile': '?0', 'origin': 'http://localhost:3001', 'sec-fetch-site': 'same-site', 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty', 'referer': 'http://localhost:3001/', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7'}
+2025-02-26 20:44:12,115 - backend.services.analysis_service - INFO - analysis_service.py:292 - Tentative de récupération des résultats pour f8fb5da1-66ee-431d-b4f4-87cfa752b9fd depuis C:\Users\berli\OneDrive\Bureau\audit_tool_clean\audit_tool\backend\data\results\f8fb5da1-66ee-431d-b4f4-87cfa752b9fd.json
+2025-02-26 20:44:12,115 - backend.services.analysis_service - ERROR - logging_utils.py:37 - Erreur lors de la récupération des résultats pour f8fb5da1-66ee-431d-b4f4-87cfa752b9fd: Expecting value: line 12 column 22 (char 285)
+2025-02-26 20:44:12,117 - backend.services.analysis_service - ERROR - logging_utils.py:38 - Traceback (most recent call last):
+  File "C:\Users\berli\OneDrive\Bureau\audit_tool_clean\audit_tool\backend\services\analysis_service.py", line 319, in get_analysis_results
+    result_dict = json.load(f)
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py", line 293, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 12 column 22 (char 285)
+
+2025-02-26 20:44:12,118 - backend.api.endpoints.analysis - ERROR - analysis.py:172 - Erreur lors de la récupération des résultats pour le fichier f8fb5da1-66ee-431d-b4f4-87cfa752b9fd: Expecting value: line 12 column 22 (char 285)
+Traceback (most recent call last):
+  File "C:\Users\berli\OneDrive\Bureau\audit_tool_clean\audit_tool\backend\api\endpoints\analysis.py", line 165, in get_analysis_results
+    results = await analysis_service.get_analysis_results(file_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\berli\OneDrive\Bureau\audit_tool_clean\audit_tool\backend\services\analysis_service.py", line 319, in get_analysis_results
+    result_dict = json.load(f)
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py", line 293, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 12 column 22 (char 285)
+2025-02-26 20:44:12,119 - root - DEBUG - main.py:67 - Response status: 500
+2025-02-26 20:44:12,119 - root - DEBUG - main.py:69 - Response headers: {'content-length': '107', 'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-expose-headers': '*'}
+2025-02-26 20:44:12,121 - root - DEBUG - main.py:61 - Incoming request: GET http://localhost:8000/api/v1/analysis/results/f8fb5da1-66ee-431d-b4f4-87cfa752b9fd
+2025-02-26 20:44:12,122 - root - DEBUG - main.py:63 - Headers: {'host': 'localhost:8000', 'connection': 'keep-alive', 'sec-ch-ua-platform': '"Windows"', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36', 'accept': 'application/json', 'sec-ch-ua': '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"', 'sec-ch-ua-mobile': '?0', 'origin': 'http://localhost:3001', 'sec-fetch-site': 'same-site', 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty', 'referer': 'http://localhost:3001/', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7'}
+2025-02-26 20:44:12,123 - backend.services.analysis_service - INFO - analysis_service.py:292 - Tentative de récupération des résultats pour f8fb5da1-66ee-431d-b4f4-87cfa752b9fd depuis C:\Users\berli\OneDrive\Bureau\audit_tool_clean\audit_tool\backend\data\results\f8fb5da1-66ee-431d-b4f4-87cfa752b9fd.json
+2025-02-26 20:44:12,123 - backend.services.analysis_service - ERROR - logging_utils.py:37 - Erreur lors de la récupération des résultats pour f8fb5da1-66ee-431d-b4f4-87cfa752b9fd: Expecting value: line 12 column 22 (char 285)
+2025-02-26 20:44:12,125 - backend.services.analysis_service - ERROR - logging_utils.py:38 - Traceback (most recent call last):
+  File "C:\Users\berli\OneDrive\Bureau\audit_tool_clean\audit_tool\backend\services\analysis_service.py", line 319, in get_analysis_results
+    result_dict = json.load(f)
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py", line 293, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 12 column 22 (char 285)
+
+2025-02-26 20:44:12,125 - backend.api.endpoints.analysis - ERROR - analysis.py:172 - Erreur lors de la récupération des résultats pour le fichier f8fb5da1-66ee-431d-b4f4-87cfa752b9fd: Expecting value: line 12 column 22 (char 285)
+Traceback (most recent call last):
+  File "C:\Users\berli\OneDrive\Bureau\audit_tool_clean\audit_tool\backend\api\endpoints\analysis.py", line 165, in get_analysis_results
+    results = await analysis_service.get_analysis_results(file_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\berli\OneDrive\Bureau\audit_tool_clean\audit_tool\backend\services\analysis_service.py", line 319, in get_analysis_results
+    result_dict = json.load(f)
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py", line 293, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 12 column 22 (char 285)
+2025-02-26 20:44:12,127 - root - DEBUG - main.py:67 - Response status: 500
+2025-02-26 20:44:12,127 - root - DEBUG - main.py:69 - Response headers: {'content-length': '107', 'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-expose-headers': '*'}
+2025-02-26 20:44:12,714 - root - DEBUG - main.py:61 - Incoming request: POST http://localhost:8000/api/v1/analysis/start
+2025-02-26 20:44:12,715 - root - DEBUG - main.py:63 - Headers: {'host': 'localhost:8000', 'connection': 'keep-alive', 'content-length': '63', 'sec-ch-ua-platform': '"Windows"', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36', 'accept': 'application/json', 'sec-ch-ua': '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"', 'content-type': 'application/json', 'sec-ch-ua-mobile': '?0', 'origin': 'http://localhost:3001', 'sec-fetch-site': 'same-site', 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty', 'referer': 'http://localhost:3001/', 'accept-encoding': 'gzip, deflate, br, zstd', 'accept-language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7'}
+2025-02-26 20:44:12,718 - backend.api.endpoints.analysis - ERROR - analysis.py:122 - Erreur lors du démarrage de l'analyse: Object of type datetime is not JSON serializable
+Traceback (most recent call last):
+  File "C:\Users\berli\OneDrive\Bureau\audit_tool_clean\audit_tool\backend\api\endpoints\analysis.py", line 105, in start_analysis
+    job_status = await analysis_service.create_analysis_job(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\berli\OneDrive\Bureau\audit_tool_clean\audit_tool\backend\services\analysis_service.py", line 109, in create_analysis_job
+    json.dump(job_status.dict(), f, ensure_ascii=False, indent=2)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py", line 179, in dump
+    for chunk in iterable:
+                 ^^^^^^^^
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py", line 439, in _iterencode
+    o = _default(o)
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+                    f'is not JSON serializable')
+TypeError: Object of type datetime is not JSON serializable
+2025-02-26 20:44:12,720 - root - DEBUG - main.py:67 - Response status: 500
+2025-02-26 20:44:12,720 - root - DEBUG - main.py:69 - Response headers: {'content-length': '101', 'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-expose-headers': '*'}

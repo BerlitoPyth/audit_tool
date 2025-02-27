@@ -1,0 +1,46 @@
+2025-02-26 21:02:05,536 - root - INFO - train_model.py:63 - Démarrage de l'entraînement du détecteur d'anomalies
+2025-02-26 21:02:05,538 - root - INFO - train_model.py:19 - Génération de 10 jeux de données d'entraînement
+2025-02-26 21:02:05,539 - root - INFO - train_model.py:34 - Jeu 1/10 généré avec 0 écritures
+2025-02-26 21:02:05,539 - root - INFO - train_model.py:34 - Jeu 2/10 généré avec 0 écritures
+2025-02-26 21:02:05,539 - root - INFO - train_model.py:34 - Jeu 3/10 généré avec 0 écritures
+2025-02-26 21:02:05,539 - root - INFO - train_model.py:34 - Jeu 4/10 généré avec 0 écritures
+2025-02-26 21:02:05,540 - root - INFO - train_model.py:34 - Jeu 5/10 généré avec 0 écritures
+2025-02-26 21:02:05,540 - root - INFO - train_model.py:34 - Jeu 6/10 généré avec 0 écritures
+2025-02-26 21:02:05,540 - root - INFO - train_model.py:34 - Jeu 7/10 généré avec 0 écritures
+2025-02-26 21:02:05,540 - root - INFO - train_model.py:34 - Jeu 8/10 généré avec 0 écritures
+2025-02-26 21:02:05,540 - root - INFO - train_model.py:34 - Jeu 9/10 généré avec 0 écritures
+2025-02-26 21:02:05,540 - root - INFO - train_model.py:34 - Jeu 10/10 généré avec 0 écritures
+2025-02-26 21:02:05,540 - root - INFO - train_model.py:36 - Total des écritures générées: 0
+2025-02-26 21:02:05,541 - backend.training.train_detector - INFO - train_detector.py:61 - Début de l'entraînement sur 0 écritures
+2025-02-26 21:02:05,541 - root - ERROR - train_model.py:59 - Erreur lors de l'entraînement: Expected 2D array, got 1D array instead:
+array=[].
+Reshape your data either using array.reshape(-1, 1) if your data has a single feature or array.reshape(1, -1) if it contains a single sample.
+Traceback (most recent call last):
+  File "C:\Users\berli\OneDrive\Bureau\audit_tool_clean\audit_tool\scripts\train_model.py", line 51, in train_detector
+    trainer.train(entries)
+    ~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\berli\OneDrive\Bureau\audit_tool_clean\audit_tool\backend\training\train_detector.py", line 69, in train
+    X = self.scalers[name].fit_transform(features[name])
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\utils\_set_output.py", line 319, in wrapped
+    data_to_wrap = f(self, X, *args, **kwargs)
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\base.py", line 918, in fit_transform
+    return self.fit(X, **fit_params).transform(X)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\preprocessing\_data.py", line 894, in fit
+    return self.partial_fit(X, y, sample_weight)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\base.py", line 1389, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\preprocessing\_data.py", line 930, in partial_fit
+    X = validate_data(
+        self,
+    ...<4 lines>...
+        reset=first_call,
+    )
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\utils\validation.py", line 2944, in validate_data
+    out = check_array(X, input_name="X", **check_params)
+  File "C:\Users\berli\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\utils\validation.py", line 1093, in check_array
+    raise ValueError(msg)
+ValueError: Expected 2D array, got 1D array instead:
+array=[].
+Reshape your data either using array.reshape(-1, 1) if your data has a single feature or array.reshape(1, -1) if it contains a single sample.

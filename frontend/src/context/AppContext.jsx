@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 // Création du contexte
-const AppContext = createContext();
+const AppContext = createContext(null);
 
 /**
  * Fournisseur du contexte de l'application
@@ -10,6 +10,8 @@ const AppContext = createContext();
 export const AppContextProvider = ({ children }) => {
   // État de notification global
   const [notification, setNotification] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   
   // État des préférences utilisateur
   const [userPreferences, setUserPreferences] = useState(() => {
@@ -61,6 +63,10 @@ export const AppContextProvider = ({ children }) => {
     closeNotification,
     userPreferences,
     updateUserPreferences,
+    loading,
+    setLoading,
+    error,
+    setError
   };
 
   return (

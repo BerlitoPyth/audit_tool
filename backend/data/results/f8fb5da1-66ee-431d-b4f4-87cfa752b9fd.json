@@ -1,0 +1,12 @@
+{
+  "anomalies": [
+    {
+      "type": "calculation_error",
+      "description": "Erreur de calcul détectée",
+      "confidence_score": 0.66,
+      "line_numbers": [
+        51
+      ],
+      "related_data": {},
+      "id": "571791a5-9b5b-43ad-9fdb-5d36e1433edf",
+      "detected_at": 

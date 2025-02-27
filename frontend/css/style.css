@@ -1,0 +1,57 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: 600;
+    font-size: 1.4rem;
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.progress {
+    height: 25px;
+    border-radius: 6px;
+}
+
+.anomaly-item {
+    border-left: 4px solid;
+    margin-bottom: 10px;
+}
+
+.anomaly-high {
+    border-left-color: #dc3545;
+}
+
+.anomaly-medium {
+    border-left-color: #ffc107;
+}
+
+.anomaly-low {
+    border-left-color: #0dcaf0;
+}
+
+.anomaly-details {
+    display: none;
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 6px;
+    margin-top: 10px;
+}
+
+.btn-details {
+    padding: 2px 8px;
+    font-size: 0.8rem;
+}
+
+.confidence-badge {
+    font-size: 0.8rem;
+}

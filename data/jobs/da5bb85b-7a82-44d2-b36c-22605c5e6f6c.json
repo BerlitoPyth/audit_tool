@@ -1,0 +1,13 @@
+{
+  "job_id": "da5bb85b-7a82-44d2-b36c-22605c5e6f6c",
+  "file_id": "72f9624a-3e10-4bdc-a6f2-f8b44d3743e0",
+  "analysis_type": "standard",
+  "options": {},
+  "status": "failed",
+  "created_at": "2025-02-26T22:47:58.216971",
+  "started_at": "2025-02-26T22:47:58.229030",
+  "completed_at": null,
+  "error": "`dumps_kwargs` keyword arguments are no longer supported.",
+  "result_path": null,
+  "progress": 80
+}

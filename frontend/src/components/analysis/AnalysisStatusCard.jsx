@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   Card, CardContent, CardHeader, Typography, Box, 
-  LinearProgress, Grid, Chip, Divider, Button
+  LinearProgress, Grid, Chip, Divider, Button, Paper
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -74,114 +74,60 @@ const AnalysisStatusCard = ({ status, fileMetadata }) => {
   }
   
   return (
-    <Card raised>
-      <CardHeader 
-        title="Analyse en cours"
-        titleTypographyProps={{ variant: 'h5' }}
-        avatar={getStatusIcon(status.status)}
-      />
-      
-      <CardContent>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Fichier analysé
-              </Typography>
-              <Typography variant="body1">
-                {fileMetadata?.filename || "Fichier inconnu"}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Taille: {fileMetadata ? `${(fileMetadata.size_bytes / (1024 * 1024)).toFixed(2)} Mo` : "Inconnue"}
-              </Typography>
-            </Box>
-            
-            <Divider sx={{ my: 2 }} />
-            
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Statut de l'analyse
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Chip 
-                  label={getStatusLabel(status.status)} 
-                  color={getStatusColor(status.status)}
-                  size="small"
-                  sx={{ mr: 2 }}
-                />
-                <Typography variant="body2">
-                  {status.message || "Analyse en cours..."}
-                </Typography>
-              </Box>
-            </Box>
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Progression
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Box sx={{ width: '100%', mr: 1 }}>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={status.progress * 100} 
-                    color={getStatusColor(status.status)}
-                    sx={{ height: 10, borderRadius: 5 }}
-                  />
-                </Box>
-                <Box sx={{ minWidth: 35 }}>
-                  <Typography variant="body2" color="textSecondary">
-                    {`${Math.round(status.progress * 100)}%`}
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-            
-            <Divider sx={{ my: 2 }} />
-            
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Informations temporelles
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="textSecondary">
-                    Démarré le:
-                  </Typography>
-                  <Typography variant="body2">
-                    {status.started_at ? new Date(status.started_at).toLocaleString() : "N/A"}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="textSecondary">
-                    Estimé:
-                  </Typography>
-                  <Typography variant="body2">
-                    {status.status === 'processing' ? (
-                      status.progress > 0 
-                        ? `~${Math.round((1 - status.progress) / (status.progress) * 
-                            ((new Date() - new Date(status.started_at)) / 1000 / 60))} minutes`
-                        : "Calcul en cours..."
-                    ) : "N/A"}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
-          </Grid>
-          
-          <Grid item xs={12} sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button 
-              variant="outlined" 
-              onClick={() => navigate('/files')}
-              sx={{ mr: 2 }}
-            >
-              Retour à la liste des fichiers
-            </Button>
-          </Grid>
+    <Paper sx={{ p: 3 }}>
+      <Grid container spacing={2}>
+        <Grid item xs={12}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Analyse en cours</Typography>
+            <Chip 
+              label={getStatusLabel(status.status)}
+              color={getStatusColor(status.status)}
+              size="small"
+            />
+          </Box>
         </Grid>
-      </CardContent>
-    </Card>
+
+        {fileMetadata && (
+          <Grid item xs={12}>
+            <Typography variant="body2" color="textSecondary">
+              Fichier: {fileMetadata.filename}
+            </Typography>
+          </Grid>
+        )}
+        
+        <Grid item xs={12}>
+          <Box sx={{ mb: 1, mt: 2 }}>
+            <Typography variant="body2" color="textSecondary">
+              Progression: {Math.round(status.progress * 100)}%
+            </Typography>
+            <LinearProgress 
+              variant="determinate" 
+              value={status.progress * 100} 
+              sx={{ mt: 1, mb: 2 }}
+            />
+          </Box>
+          
+          {status.message && (
+            <Typography variant="body2" color="textSecondary">
+              {status.message}
+            </Typography>
+          )}
+        </Grid>
+
+        <Grid item xs={12}>
+          <Box sx={{ mt: 1 }}>
+            <Typography variant="body2" color="textSecondary">
+              Démarré à: {new Date(status.started_at).toLocaleString()}
+            </Typography>
+            {status.completed_at && (
+              <Typography variant="body2" color="textSecondary">
+                Terminé à: {new Date(status.completed_at).toLocaleString()}
+              </Typography>
+            )}
+          </Box>
+        </Grid>
+      </Grid>
+    </Paper>
   );
 };
 

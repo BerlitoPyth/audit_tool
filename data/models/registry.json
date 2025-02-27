@@ -1,0 +1,48 @@
+{
+  "models": [
+    {
+      "version": "20250226_221728",
+      "created_at": "2025-02-26T22:17:28.284212",
+      "files": {
+        "amount_model": "C:\\Users\\berli\\OneDrive\\Bureau\\audit_tool_clean\\audit_tool\\data\\models\\amount_model_20250226_221728.joblib",
+        "amount_scaler": "C:\\Users\\berli\\OneDrive\\Bureau\\audit_tool_clean\\audit_tool\\data\\models\\amount_scaler_20250226_221728.joblib",
+        "date_patterns_model": "C:\\Users\\berli\\OneDrive\\Bureau\\audit_tool_clean\\audit_tool\\data\\models\\date_patterns_model_20250226_221728.joblib",
+        "date_patterns_scaler": "C:\\Users\\berli\\OneDrive\\Bureau\\audit_tool_clean\\audit_tool\\data\\models\\date_patterns_scaler_20250226_221728.joblib",
+        "balance_model": "C:\\Users\\berli\\OneDrive\\Bureau\\audit_tool_clean\\audit_tool\\data\\models\\balance_model_20250226_221728.joblib",
+        "balance_scaler": "C:\\Users\\berli\\OneDrive\\Bureau\\audit_tool_clean\\audit_tool\\data\\models\\balance_scaler_20250226_221728.joblib"
+      },
+      "metrics": {
+        "training_time": 1.458409309387207,
+        "training_samples": 21337,
+        "training_date": "2025-02-26T22:17:28.182309",
+        "amount_anomaly_rate": 0.04483586869495596,
+        "amount_score_mean": -0.49583324369556386,
+        "amount_score_std": 0.039957954720841266,
+        "date_patterns_anomaly_rate": 0.04483586869495596,
+        "date_patterns_score_mean": -0.5107355581103701,
+        "date_patterns_score_std": 0.04421911321940082,
+        "balance_anomaly_rate": 0.04243394715772618,
+        "balance_score_mean": -0.4512615778400332,
+        "balance_score_std": 0.08523235427758503
+      },
+      "metadata": {
+        "description": "Modèle de détection d'anomalies",
+        "anomaly_rates": [
+          0.05,
+          0.07,
+          0.09,
+          0.11,
+          0.13,
+          0.15000000000000002,
+          0.16999999999999998,
+          0.19,
+          0.21000000000000002,
+          0.22999999999999998
+        ],
+        "command_line": "scripts/train_detector.py --num-sets 10 --entries-per-set 1000 --evaluate --activate"
+      },
+      "is_active": true
+    }
+  ],
+  "active_version": "20250226_221728"
+}

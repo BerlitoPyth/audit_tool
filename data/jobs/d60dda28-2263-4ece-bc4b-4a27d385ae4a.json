@@ -1,0 +1,13 @@
+{
+  "job_id": "d60dda28-2263-4ece-bc4b-4a27d385ae4a",
+  "file_id": "e2eae214-59bf-4322-b29c-74b99d042c3e",
+  "analysis_type": "standard",
+  "options": {},
+  "status": "failed",
+  "created_at": "2025-02-26T23:05:02.658964",
+  "started_at": "2025-02-26T23:05:02.686925",
+  "completed_at": null,
+  "error": "BaseModel.model_dump_json() got an unexpected keyword argument 'ensure_ascii'",
+  "result_path": null,
+  "progress": 80
+}

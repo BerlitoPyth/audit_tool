@@ -1,0 +1,14 @@
+Metadata-Version: 2.2
+Name: audit_tool
+Version: 0.1
+License-File: LICENSE
+Requires-Dist: fastapi
+Requires-Dist: uvicorn
+Requires-Dist: pydantic
+Requires-Dist: pydantic-settings
+Requires-Dist: aiofiles
+Requires-Dist: python-multipart
+Requires-Dist: pandas
+Requires-Dist: numpy
+Requires-Dist: scikit-learn
+Dynamic: requires-dist

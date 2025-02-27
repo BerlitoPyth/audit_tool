@@ -1,0 +1,106 @@
+{
+  "anomalies": [
+    {
+      "id": "a9d2d352-542c-4624-b134-5d34587464fa",
+      "type": "calculation_error",
+      "description": "Erreur de calcul détectée",
+      "confidence_score": 0.83,
+      "line_numbers": [
+        857
+      ],
+      "related_data": {},
+      "detected_at": "2025-02-26T20:46:49.965591"
+    },
+    {
+      "id": "df37fcce-7ac9-45e1-bf16-7016005c4127",
+      "type": "missing_data",
+      "description": "Données manquantes dans le champ obligatoire",
+      "confidence_score": 0.7,
+      "line_numbers": [
+        610
+      ],
+      "related_data": {
+        "missing_fields": [
+          "compte_num",
+          "ecriture_lib"
+        ],
+        "importance": "high"
+      },
+      "detected_at": "2025-02-26T20:46:49.969582"
+    },
+    {
+      "id": "fef04186-c073-4375-a45f-cd7638d054b7",
+      "type": "custom",
+      "description": "Anomalie personnalisée",
+      "confidence_score": 0.94,
+      "line_numbers": [
+        836
+      ],
+      "related_data": {},
+      "detected_at": "2025-02-26T20:46:49.974459"
+    },
+    {
+      "id": "ccd1b346-9ede-47d5-a091-6d66e7640328",
+      "type": "incorrect_format",
+      "description": "Format de données incorrect",
+      "confidence_score": 0.91,
+      "line_numbers": [
+        926
+      ],
+      "related_data": {},
+      "detected_at": "2025-02-26T20:46:49.974581"
+    },
+    {
+      "id": "5b904cfc-c5c7-4569-96d4-2c0a3c23721b",
+      "type": "balance_mismatch",
+      "description": "Déséquilibre entre débit et crédit",
+      "confidence_score": 0.87,
+      "line_numbers": [
+        584
+      ],
+      "related_data": {
+        "expected_balance": 5492.51,
+        "actual_balance": 4647.09,
+        "difference": 334.12
+      },
+      "detected_at": "2025-02-26T20:46:49.974631"
+    },
+    {
+      "id": "e5dbcfe9-ec88-4309-802c-385d48011c8d",
+      "type": "missing_data",
+      "description": "Données manquantes dans le champ obligatoire",
+      "confidence_score": 0.87,
+      "line_numbers": [
+        937
+      ],
+      "related_data": {
+        "missing_fields": [
+          "compte_num",
+          "ecriture_lib"
+        ],
+        "importance": "high"
+      },
+      "detected_at": "2025-02-26T20:46:49.974667"
+    },
+    {
+      "id": "a6302129-b22d-486c-8f96-c763cafd3841",
+      "type": "missing_data",
+      "description": "Données manquantes dans le champ obligatoire",
+      "confidence_score": 0.81,
+      "line_numbers": [
+        53
+      ],
+      "related_data": {
+        "missing_fields": [
+          "compte_num",
+          "ecriture_lib"
+        ],
+        "importance": "high"
+      },
+      "detected_at": "2025-02-26T20:46:49.974700"
+    }
+  ],
+  "total_count": 7,
+  "file_id": "8f38b238-c14a-4f55-86f6-2865988aa6d2",
+  "analysis_duration_ms": 2452.5162288400015
+}

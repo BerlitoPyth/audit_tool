@@ -13,7 +13,7 @@ from backend.models.schemas import (
     AnomalyResponse, AnalysisRequest, AnalysisJobStatus, FileUploadResponse, PaginationParams
 )
 from backend.services.analysis_service import AnalysisService, get_analysis_service
-from backend.utils.file_handling import save_upload_file, validate_fec_file
+from backend.utils.file_handling import save_upload_file, validate_file
 from backend.core.errors import FileProcessingError, ResourceNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ async def upload_file(
     analysis_service: AnalysisService = Depends(get_analysis_service)
 ):
     """
-    Endpoint pour uploader un fichier FEC.
+    Endpoint pour uploader un fichier (FEC ou Excel).
     """
     start_time = time.time()
     
@@ -44,8 +44,8 @@ async def upload_file(
     file_id = str(uuid.uuid4())
     
     try:
-        # Validation du format FEC (à implémenter dans utils/file_handling.py)
-        is_valid, validation_message = await validate_fec_file(file)
+        # Validation du format du fichier (FEC ou Excel)
+        is_valid, validation_message = await validate_file(file)
         if not is_valid:
             raise FileProcessingError(
                 message=f"Fichier invalide: {validation_message}",

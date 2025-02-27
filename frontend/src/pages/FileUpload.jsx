@@ -1,345 +1,216 @@
-import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useRef } from 'react';
 import { 
-  Box, Container, Paper, Typography, Button, TextField, 
-  Grid, LinearProgress, Alert, AlertTitle, Divider,
-  Stepper, Step, StepLabel, StepContent, Card, CardContent
+  Box, Typography, Button, Paper, Grid, TextField, 
+  Alert, AlertTitle, CircularProgress, List, ListItem,
+  ListItemIcon, ListItemText, Divider, Chip
 } from '@mui/material';
-import { 
+import {
   CloudUpload as UploadIcon,
-  CheckCircle as SuccessIcon,
-  Error as ErrorIcon,
-  Description as FileIcon
+  CheckCircleOutline as CheckIcon,
+  InsertDriveFile as FileIcon,
+  Description as DescriptionIcon
 } from '@mui/icons-material';
-import { useDropzone } from 'react-dropzone';
 import { analysisService } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
-/**
- * Page d'upload de fichiers FEC
- * Permet de télécharger un fichier, puis de lancer une analyse
- */
-const FileUpload = () => {
-  const navigate = useNavigate();
-  
-  // États pour le formulaire et le process d'upload
+function FileUpload() {
   const [file, setFile] = useState(null);
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
-  const [uploadResult, setUploadResult] = useState(null);
-  const [activeStep, setActiveStep] = useState(0);
-  
-  // Configuration de la zone de drop pour les fichiers
-  const onDrop = useCallback(acceptedFiles => {
-    // Ne prendre que le premier fichier
-    if (acceptedFiles.length > 0) {
-      setFile(acceptedFiles[0]);
+  const [uploadedFileId, setUploadedFileId] = useState(null);
+  const fileInputRef = useRef(null);
+  const navigate = useNavigate();
+
+  const handleFileChange = (event) => {
+    const selectedFile = event.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
       setError(null);
     }
-  }, []);
-  
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
-    onDrop,
-    accept: {
-      'text/csv': ['.csv'],
-      'application/vnd.ms-excel': ['.csv', '.xls', '.xlsx'],
-      'application/octet-stream': ['.fec']
-    },
-    maxSize: 100 * 1024 * 1024, // 100 MB max
-    multiple: false
-  });
-  
-  // Gérer le changement de description
-  const handleDescriptionChange = (e) => {
-    setDescription(e.target.value);
   };
-  
-  // Simuler la progression de l'upload
-  const simulateProgress = () => {
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 10;
-      if (progress > 95) {
-        progress = 95;
-        clearInterval(interval);
-      }
-      setUploadProgress(progress);
-    }, 300);
-    
-    return interval;
-  };
-  
-  // Gérer l'upload du fichier
+
   const handleUpload = async () => {
     if (!file) {
-      setError('Veuillez sélectionner un fichier');
+      setError("Veuillez sélectionner un fichier");
       return;
     }
-    
+
     try {
       setLoading(true);
       setError(null);
-      setActiveStep(1);
       
-      // Simuler la progression (car l'API ne nous donne pas de feedback en temps réel)
-      const progressInterval = simulateProgress();
+      const response = await analysisService.uploadFile(file, description);
       
-      // Appel API pour l'upload
-      const result = await analysisService.uploadFile(file, description);
+      setSuccess(true);
+      setUploadedFileId(response.file_id);
       
-      // Arrêter la simulation et mettre la barre à 100%
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-      
-      if (result.error) {
-        throw new Error(result.message || 'Erreur lors de l\'upload');
+      // Réinitialiser l'interface après le succès
+      setFile(null);
+      setDescription('');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
       
-      // Mettre à jour l'état avec le résultat
-      setUploadResult(result);
-      setActiveStep(2);
-      
     } catch (err) {
-      console.error('Erreur upload:', err);
-      setError(err.message || 'Une erreur s\'est produite lors de l\'upload');
-      setActiveStep(0);
+      console.error("Erreur lors de l'upload:", err);
+      setError(err.message || "Une erreur est survenue lors de l'upload du fichier");
     } finally {
       setLoading(false);
     }
   };
-  
-  // Lancer directement l'analyse après l'upload
-  const handleStartAnalysis = async () => {
-    if (!uploadResult || !uploadResult.file_id) {
-      setError('Aucun fichier uploadé');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      setError(null);
-      setActiveStep(3);
-      
-      // Appel API pour démarrer l'analyse
-      const result = await analysisService.startAnalysis(uploadResult.file_id);
-      
-      if (result.error) {
-        throw new Error(result.message || 'Erreur lors du lancement de l\'analyse');
-      }
-      
-      // Rediriger vers la page de détails du fichier
-      navigate(`/analysis/${uploadResult.file_id}`);
-      
-    } catch (err) {
-      console.error('Erreur analyse:', err);
-      setError(err.message || 'Une erreur s\'est produite lors du lancement de l\'analyse');
-    } finally {
-      setLoading(false);
+
+  const viewAnalysis = () => {
+    if (uploadedFileId) {
+      navigate(`/analysis/${uploadedFileId}`);
     }
   };
-  
-  // Étapes du processus d'upload et d'analyse
-  const steps = [
-    {
-      label: 'Sélection du fichier',
-      description: 'Sélectionnez un fichier FEC à analyser',
-      content: (
-        <Box sx={{ mt: 2 }}>
-          <div
-            {...getRootProps()}
-            style={{
-              border: `2px dashed ${isDragActive ? '#2196f3' : '#cccccc'}`,
-              borderRadius: '4px',
-              padding: '20px',
-              textAlign: 'center',
-              cursor: 'pointer',
-              backgroundColor: isDragActive ? 'rgba(33, 150, 243, 0.1)' : '#fafafa',
-              marginBottom: '20px'
-            }}
-          >
-            <input {...getInputProps()} />
-            <UploadIcon style={{ fontSize: 48, color: '#757575', marginBottom: '8px' }} />
-            <Typography variant="h6" gutterBottom>
-              Glissez-déposez un fichier ici
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              ou cliquez pour sélectionner un fichier
-            </Typography>
-            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 1 }}>
-              Formats acceptés: .csv, .xls, .xlsx, .fec (max 100 Mo)
-            </Typography>
-          </div>
-          
-          {file && (
-            <Card variant="outlined" sx={{ mb: 3 }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <FileIcon color="primary" sx={{ mr: 2 }} />
-                  <Box>
-                    <Typography variant="subtitle1">{file.name}</Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      {(file.size / (1024 * 1024)).toFixed(2)} Mo
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          )}
-          
-          <TextField
-            label="Description (optionnelle)"
-            multiline
-            rows={3}
-            fullWidth
-            variant="outlined"
-            value={description}
-            onChange={handleDescriptionChange}
-            disabled={loading}
-            placeholder="Ajouter une description du fichier..."
-            sx={{ mb: 3 }}
-          />
-          
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<UploadIcon />}
-            onClick={handleUpload}
-            disabled={!file || loading}
-            fullWidth
-          >
-            Uploader le fichier
-          </Button>
-        </Box>
-      )
-    },
-    {
-      label: 'Upload en cours',
-      description: 'Le fichier est en cours d\'upload sur le serveur',
-      content: (
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="body1" gutterBottom>
-            Upload en cours de {file?.name}...
-          </Typography>
-          <Box sx={{ mt: 2, mb: 2 }}>
-            <LinearProgress 
-              variant="determinate" 
-              value={uploadProgress} 
-            />
-            <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-              {Math.round(uploadProgress)}% terminé
-            </Typography>
-          </Box>
-        </Box>
-      )
-    },
-    {
-      label: 'Upload terminé',
-      description: 'Le fichier a été uploadé avec succès',
-      content: (
-        <Box sx={{ mt: 2 }}>
-          <Alert severity="success" sx={{ mb: 3 }}>
-            <AlertTitle>Succès</AlertTitle>
-            Le fichier a été uploadé avec succès !
-          </Alert>
-          
-          <Typography variant="subtitle1" gutterBottom>
-            Informations sur le fichier:
-          </Typography>
-          
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={4}>
-              <Typography variant="body2" color="textSecondary">ID:</Typography>
-            </Grid>
-            <Grid item xs={8}>
-              <Typography variant="body2">{uploadResult?.file_id}</Typography>
-            </Grid>
-            
-            <Grid item xs={4}>
-              <Typography variant="body2" color="textSecondary">Nom:</Typography>
-            </Grid>
-            <Grid item xs={8}>
-              <Typography variant="body2">{uploadResult?.filename}</Typography>
-            </Grid>
-            
-            <Grid item xs={4}>
-              <Typography variant="body2" color="textSecondary">Taille:</Typography>
-            </Grid>
-            <Grid item xs={8}>
-              <Typography variant="body2">
-                {(uploadResult?.size_bytes / (1024 * 1024)).toFixed(2)} Mo
+
+  return (
+    <Box>
+      <Typography variant="h4" gutterBottom>
+        Upload de fichier
+      </Typography>
+      
+      <Paper sx={{ p: 3, mb: 4 }}>
+        <Typography variant="h6" gutterBottom>
+          Sélectionnez un fichier à analyser
+        </Typography>
+        
+        <Typography variant="body2" color="text.secondary" paragraph>
+          Formats acceptés: .csv, .txt (fichiers FEC), .xlsx, .xls (fichiers Excel)
+        </Typography>
+        
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Box
+              sx={{
+                border: '2px dashed #ccc',
+                borderRadius: 1,
+                p: 3,
+                textAlign: 'center',
+                mb: 3,
+                cursor: 'pointer',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5'
+                }
+              }}
+              onClick={() => fileInputRef.current && fileInputRef.current.click()}
+            >
+              <input
+                type="file"
+                hidden
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".csv,.txt,.xlsx,.xls"
+              />
+              <UploadIcon fontSize="large" color="primary" />
+              <Typography variant="body1" sx={{ mt: 1 }}>
+                Cliquez pour sélectionner un fichier ou glissez-déposez ici
               </Typography>
-            </Grid>
+              
+              {file && (
+                <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FileIcon color="primary" sx={{ mr: 1 }} />
+                  <Typography>
+                    {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                  </Typography>
+                </Box>
+              )}
+            </Box>
           </Grid>
           
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleStartAnalysis}
-            disabled={loading}
-            fullWidth
-          >
-            Lancer l'analyse
-          </Button>
-        </Box>
-      )
-    },
-    {
-      label: 'Lancement de l\'analyse',
-      description: 'L\'analyse du fichier est en cours de lancement',
-      content: (
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="body1" gutterBottom>
-            Lancement de l'analyse en cours...
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
-            <LinearProgress sx={{ width: '50%' }} />
-          </Box>
-          <Typography variant="body2" color="textSecondary">
-            Vous allez être redirigé vers la page d'analyse...
-          </Typography>
-        </Box>
-      )
-    }
-  ];
-  
-  return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Upload d'un fichier FEC
-        </Typography>
-        <Typography variant="body1" color="textSecondary" paragraph>
-          Uploadez un fichier FEC (Format d'Échange Comptable) pour l'analyser et détecter les anomalies potentielles.
-        </Typography>
-        
-        <Divider sx={{ my: 3 }} />
+          <Grid item xs={12}>
+            <TextField
+              label="Description (optionnelle)"
+              variant="outlined"
+              fullWidth
+              multiline
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Ajoutez une description pour ce fichier"
+            />
+          </Grid>
+          
+          <Grid item xs={12}>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <UploadIcon />}
+              onClick={handleUpload}
+              disabled={!file || loading}
+              fullWidth
+              size="large"
+            >
+              {loading ? 'Upload en cours...' : 'Uploader le fichier'}
+            </Button>
+          </Grid>
+        </Grid>
         
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert severity="error" sx={{ mt: 3 }}>
             <AlertTitle>Erreur</AlertTitle>
             {error}
           </Alert>
         )}
         
-        <Stepper activeStep={activeStep} orientation="vertical">
-          {steps.map((step, index) => (
-            <Step key={step.label}>
-              <StepLabel>
-                <Typography variant="subtitle1">{step.label}</Typography>
-              </StepLabel>
-              <StepContent>
-                <Typography variant="body2" color="textSecondary">
-                  {step.description}
-                </Typography>
-                {step.content}
-              </StepContent>
-            </Step>
-          ))}
-        </Stepper>
+        {success && (
+          <Alert severity="success" sx={{ mt: 3 }}>
+            <AlertTitle>Succès</AlertTitle>
+            Le fichier a été uploadé avec succès !
+            <Box sx={{ mt: 2 }}>
+              <Button
+                variant="outlined"
+                color="success"
+                startIcon={<DescriptionIcon />}
+                onClick={viewAnalysis}
+              >
+                Voir l'analyse
+              </Button>
+            </Box>
+          </Alert>
+        )}
       </Paper>
-    </Container>
+      
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Conseils pour l'upload de fichiers
+        </Typography>
+        
+        <List>
+          <ListItem>
+            <ListItemIcon><CheckIcon color="success" /></ListItemIcon>
+            <ListItemText 
+              primary="Formats de fichiers acceptés" 
+              secondary="Fichiers FEC (.csv, .txt) ou fichiers Excel (.xlsx, .xls)" 
+            />
+          </ListItem>
+          
+          <Divider component="li" />
+          
+          <ListItem>
+            <ListItemIcon><CheckIcon color="success" /></ListItemIcon>
+            <ListItemText 
+              primary="Taille maximale" 
+              secondary="100 MB par fichier" 
+            />
+          </ListItem>
+          
+          <Divider component="li" />
+          
+          <ListItem>
+            <ListItemIcon><CheckIcon color="success" /></ListItemIcon>
+            <ListItemText 
+              primary="Structure des données" 
+              secondary="Assurez-vous que votre fichier suit la structure standard des fichiers FEC ou contient des données financières dans un format tabulaire." 
+            />
+          </ListItem>
+        </List>
+      </Paper>
+    </Box>
   );
-};
+}
 
 export default FileUpload;

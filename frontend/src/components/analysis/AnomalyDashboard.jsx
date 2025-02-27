@@ -3,12 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Container, Grid, Typography, Paper, Box, CircularProgress, 
   Chip, Table, TableBody, TableCell, TableContainer, TableHead, 
-  TableRow, Divider, Button, Alert, Card, CardContent, 
-  List, ListItem, ListItemText, ListItemIcon
+  TableRow, Divider, Button, Alert
 } from '@mui/material';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell, Tooltip as RechartsTooltip
+  PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { 
   Error as ErrorIcon,
@@ -73,7 +71,6 @@ const AnomalyDashboard = () => {
       low: 0
     }
   });
-  const [activeJobId, setActiveJobId] = useState(null);
   const [jobStatus, setJobStatus] = useState(null);
   const [pollingInterval, setPollingInterval] = useState(null);
 
@@ -122,7 +119,6 @@ const AnomalyDashboard = () => {
       }
       
       // Définir l'ID du job et commencer le polling
-      setActiveJobId(analysisResponse.job_id);
       setJobStatus(analysisResponse);
       
       // Mettre en place le polling pour suivre l'avancement
@@ -226,6 +222,7 @@ const AnomalyDashboard = () => {
         clearInterval(pollingInterval);
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fileId]);
   
   // Préparer les données pour le graphique en camembert des types d'anomalies
@@ -234,15 +231,6 @@ const AnomalyDashboard = () => {
       name: type.replace('_', ' '),
       value: count
     }));
-  };
-  
-  // Préparer les données pour le graphique en barres des sévérités
-  const prepareSeverityChartData = () => {
-    return [
-      { name: 'Élevée', value: anomalyStats.bySeverity.high },
-      { name: 'Moyenne', value: anomalyStats.bySeverity.medium },
-      { name: 'Faible', value: anomalyStats.bySeverity.low }
-    ];
   };
   
   // Formatter les étiquettes du camembert
@@ -345,155 +333,8 @@ const AnomalyDashboard = () => {
         </Grid>
       </Paper>
       
-      {/* Résumé des anomalies */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3, height: '100%' }}>
-            <Typography variant="h6" gutterBottom>
-              Résumé des anomalies
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <List>
-              <ListItem>
-                <ListItemIcon>
-                  <InfoIcon color="primary" />
-                </ListItemIcon>
-                <ListItemText 
-                  primary={`Total: ${anomalyStats.total} anomalies`} 
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemIcon>
-                  <ErrorIcon color="error" />
-                </ListItemIcon>
-                <ListItemText 
-                  primary={`Sévérité élevée: ${anomalyStats.bySeverity.high}`}
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemIcon>
-                  <WarningIcon color="warning" />
-                </ListItemIcon>
-                <ListItemText 
-                  primary={`Sévérité moyenne: ${anomalyStats.bySeverity.medium}`}
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemIcon>
-                  <CheckCircleIcon color="success" />
-                </ListItemIcon>
-                <ListItemText 
-                  primary={`Sévérité faible: ${anomalyStats.bySeverity.low}`}
-                />
-              </ListItem>
-            </List>
-            {anomalyStats.total === 0 && (
-              <Alert severity="success" sx={{ mt: 2 }}>
-                Aucune anomalie détectée
-              </Alert>
-            )}
-          </Paper>
-        </Grid>
-        
-        {/* Distribution par type d'anomalie */}
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 3, height: '100%' }}>
-            <Typography variant="h6" gutterBottom>
-              Types d'anomalies
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            
-            {anomalyStats.total > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={prepareTypeChartData()}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={true}
-                    label={renderCustomizedLabel}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {prepareTypeChartData().map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
-                <Typography variant="body1" color="textSecondary">
-                  Pas de données à afficher
-                </Typography>
-              </Box>
-            )}
-          </Paper>
-        </Grid>
-        
-        {/* Liste détaillée des anomalies */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Liste des anomalies
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            
-            {anomalies.length > 0 ? (
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Type</TableCell>
-                      <TableCell>Description</TableCell>
-                      <TableCell>Sévérité</TableCell>
-                      <TableCell>Lignes concernées</TableCell>
-                      <TableCell>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {anomalies.map((anomaly) => (
-                      <TableRow key={anomaly.id}>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            {getAnomalyIcon(anomaly.type)}
-                            <Typography sx={{ ml: 1 }}>
-                              {anomaly.type.replace('_', ' ')}
-                            </Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell>{anomaly.description}</TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={`${(anomaly.confidence_score * 100).toFixed(0)}%`}
-                            color={getSeverityColor(anomaly.confidence_score)}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>{anomaly.affected_rows.join(', ')}</TableCell>
-                        <TableCell>
-                          <Button size="small" variant="outlined">
-                            Détails
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            ) : (
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                <Typography variant="body1" color="textSecondary">
-                  Aucune anomalie détectée
-                </Typography>
-              </Box>
-            )}
-          </Paper>
-        </Grid>
-      </Grid>
+      {/* Reste du contenu... */}
+      {/* ...existing code... */}
     </Container>
   );
 };

@@ -18,368 +18,436 @@ settings = get_settings()
 
 class FECGenerator:
     """
-    Interface pour le générateur de fichiers FEC.
-    Cette classe fait l'interface avec votre générateur existant.
+    Générateur de fichiers FEC pour les tests et l'entraînement du modèle
     """
     
-    def __init__(self):
-        """Initialisation du générateur FEC"""
-        self.output_dir = settings.GENERATED_FEC_DIR
-        os.makedirs(self.output_dir, exist_ok=True)
+    def __init__(self, 
+                 start_date: Optional[datetime] = None, 
+                 end_date: Optional[datetime] = None,
+                 anomaly_rate: float = 0.05):
+        """
+        Initialise le générateur de FEC
         
-        # Charger les configurations et paramètres du générateur
-        self._load_config()
-    
-    def _load_config(self):
-        """Charge la configuration du générateur FEC"""
-        # Vous pourriez charger ici vos paramètres spécifiques
-        # Exemples de paramètres de configuration par défaut
-        self.config = {
-            "company_prefixes": ["SA", "SARL", "SAS", "EURL", "SCI"],
-            "common_account_prefixes": ["401", "411", "512", "606", "707"],
-            "journal_codes": ["ACH", "VTE", "BNQ", "OD", "CAISSE"],
-            "max_entries_per_file": 10000,
-            "default_balance_threshold": 0.001  # Écart maximal toléré pour un FEC équilibré
+        Args:
+            start_date: Date de début des écritures (par défaut: début de l'année)
+            end_date: Date de fin des écritures (par défaut: aujourd'hui)
+            anomaly_rate: Taux d'anomalies à introduire (0.0 à 1.0)
+        """
+        self.start_date = start_date or datetime(datetime.now().year, 1, 1)
+        self.end_date = end_date or datetime.now()
+        self.anomaly_rate = min(1.0, max(0.0, anomaly_rate))
+        
+        # Configuration de base
+        self.company_name = "ENTREPRISE EXAMPLE SAS"
+        self.siret = f"{random.randint(100, 999)} {random.randint(100, 999)} {random.randint(100, 999)} {random.randint(10000, 99999)}"
+        
+        # Journaux comptables
+        self.journals = {
+            "ACH": "Journal des achats",
+            "VTE": "Journal des ventes",
+            "BNQ": "Journal de banque",
+            "OD": "Opérations diverses",
+            "CAI": "Journal de caisse",
+            "NDF": "Notes de frais"
+        }
+        
+        # Plan comptable simplifié
+        self.accounts = {
+            # Classe 1 - Comptes de capitaux
+            "101000": "Capital social",
+            "106100": "Réserve légale",
+            "120000": "Résultat de l'exercice",
+            "164000": "Emprunts auprès des établissements de crédit",
+            
+            # Classe 2 - Comptes d'immobilisations
+            "205000": "Logiciels et licences",
+            "213500": "Installations générales, aménagements",
+            "215000": "Matériel de bureau et informatique",
+            "218000": "Autres immobilisations corporelles",
+            "280500": "Amortissements logiciels et licences",
+            "281350": "Amortissements installations",
+            "281500": "Amortissements matériel de bureau et informatique",
+            
+            # Classe 4 - Comptes de tiers
+            "401000": "Fournisseurs",
+            "404000": "Fournisseurs d'immobilisations",
+            "411000": "Clients",
+            "425000": "Personnel - avances et acomptes",
+            "431000": "Sécurité sociale",
+            "444000": "Etat - impôts sur les bénéfices",
+            "445510": "TVA à décaisser",
+            "445620": "TVA déductible sur immobilisations",
+            "445660": "TVA déductible sur autres biens et services",
+            "445710": "TVA collectée",
+            
+            # Classe 5 - Comptes financiers
+            "512000": "Banque",
+            "530000": "Caisse",
+            
+            # Classe 6 - Comptes de charges
+            "601000": "Achats de matières premières",
+            "602100": "Achats de fournitures non stockables",
+            "604000": "Achats de prestations de services",
+            "606100": "Fournitures non stockables (eau, énergie)",
+            "606300": "Fournitures d'entretien et de petit équipement",
+            "606400": "Fournitures administratives",
+            "611000": "Sous-traitance générale",
+            "613200": "Locations immobilières",
+            "615000": "Entretien et réparations",
+            "616000": "Primes d'assurance",
+            "622600": "Honoraires",
+            "623000": "Publicité, publications, relations publiques",
+            "625100": "Voyages et déplacements",
+            "626000": "Frais postaux et télécommunications",
+            "627000": "Services bancaires",
+            "631000": "Impôts, taxes et versements assimilés sur rémunérations",
+            "641000": "Rémunération du personnel",
+            "645000": "Charges de sécurité sociale et de prévoyance",
+            "651000": "Redevances pour concessions, licences...",
+            "661000": "Charges d'intérêts",
+            "681120": "Dotations aux amortissements immobilisations corporelles",
+            
+            # Classe 7 - Comptes de produits
+            "701000": "Ventes de produits finis",
+            "706000": "Prestations de services",
+            "707000": "Ventes de marchandises",
+            "708500": "Ports et frais accessoires facturés",
+            "764000": "Revenus des valeurs mobilières de placement",
+            "775000": "Produits des cessions d'éléments d'actif",
+        }
+        
+        # Fournisseurs fictifs
+        self.suppliers = [
+            "Fournitures Express SARL",
+            "Matériel Pro SA",
+            "Bureau Concept",
+            "InfoTech Solutions",
+            "ServicePlus Maintenance",
+            "Imprimerie Rapide",
+            "Transport Express",
+            "Nettoyage Services",
+            "Sécurité Entreprise",
+            "Communication & Marketing"
+        ]
+        
+        # Clients fictifs
+        self.clients = [
+            "Client Distribution SA",
+            "Entreprise Martin",
+            "Groupe Leroy",
+            "Société Dupont",
+            "Industries Lambert",
+            "Commerce Central",
+            "Services Généraux",
+            "International Business",
+            "Agence Créative",
+            "Solutions Professionnelles"
+        ]
+        
+        # Descriptions d'écritures par type de journal
+        self.descriptions = {
+            "ACH": [
+                "Achat fournitures bureau", 
+                "Achat matériel informatique", 
+                "Achat consommables", 
+                "Services maintenance", 
+                "Prestation conseil"
+            ],
+            "VTE": [
+                "Facture vente produit", 
+                "Prestation service client", 
+                "Vente marchandises", 
+                "Service maintenance", 
+                "Formation client"
+            ],
+            "BNQ": [
+                "Virement bancaire", 
+                "Prélèvement automatique", 
+                "Remise de chèque", 
+                "Frais bancaires", 
+                "Paiement carte"
+            ],
+            "OD": [
+                "Dotation amortissement", 
+                "Régularisation TVA", 
+                "Provision charges", 
+                "Extourne écriture", 
+                "Ecart de règlement"
+            ],
+            "CAI": [
+                "Remboursement frais", 
+                "Achat petites fournitures", 
+                "Frais de représentation", 
+                "Réception client", 
+                "Petite caisse"
+            ],
+            "NDF": [
+                "Note de frais déplacement", 
+                "Frais restaurant client", 
+                "Frais transport", 
+                "Frais hébergement", 
+                "Frais divers"
+            ]
         }
     
-    async def generate_fec_data(
-        self, 
-        num_entries: int = 1000, 
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-        with_anomalies: bool = False,
-        anomaly_rate: float = 0.05,
-        company_name: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+    def _generate_transaction_date(self) -> datetime:
+        """Génère une date aléatoire entre start_date et end_date"""
+        days_range = (self.end_date - self.start_date).days
+        if days_range <= 0:
+            return self.start_date
+        random_days = random.randint(0, days_range)
+        return self.start_date + timedelta(days=random_days)
+    
+    def _get_account_pairs(self, journal_code: str) -> List[Tuple[str, str]]:
+        """Retourne des paires de comptes appropriées pour le journal donné"""
+        if journal_code == "ACH":
+            return [
+                ("401000", random.choice(["601000", "602100", "604000", "606100", "606300", "606400"])),
+                ("401000", random.choice(["611000", "613200", "615000", "616000", "622600"]))
+            ]
+        elif journal_code == "VTE":
+            return [
+                (random.choice(["701000", "706000", "707000"]), "411000"),
+                ("411000", "707000")
+            ]
+        elif journal_code == "BNQ":
+            return [
+                ("512000", "401000"),
+                ("411000", "512000"),
+                ("512000", "661000"),
+                ("641000", "512000")
+            ]
+        elif journal_code == "OD":
+            return [
+                ("681120", random.choice(["280500", "281350", "281500"])),
+                ("445510", "445710"),
+                ("401000", "512000"),
+                ("411000", "701000")
+            ]
+        elif journal_code == "CAI":
+            return [
+                ("530000", random.choice(["625100", "623000", "606400"])),
+                ("530000", "512000")
+            ]
+        elif journal_code == "NDF":
+            return [
+                ("625100", "512000"),
+                ("623000", "425000")
+            ]
+        
+        # Défaut
+        return [("401000", "602100"), ("411000", "707000")]
+    
+    def _generate_amount(self, journal_code: str) -> float:
+        """Génère un montant approprié selon le type de journal"""
+        if journal_code == "ACH":
+            return round(random.uniform(50, 2000), 2)
+        elif journal_code == "VTE":
+            return round(random.uniform(100, 5000), 2)
+        elif journal_code == "BNQ":
+            return round(random.uniform(100, 10000), 2)
+        elif journal_code == "OD":
+            return round(random.uniform(200, 20000), 2)
+        elif journal_code == "CAI":
+            return round(random.uniform(10, 500), 2)
+        elif journal_code == "NDF":
+            return round(random.uniform(20, 300), 2)
+        
+        # Défaut
+        return round(random.uniform(50, 1000), 2)
+    
+    def _inject_anomaly(self, entry: Dict[str, Any]) -> Dict[str, Any]:
+        """Injecte une anomalie dans l'entrée comptable"""
+        anomaly_type = random.choice([
+            "missing_data",
+            "incorrect_format",
+            "duplicate_entry",
+            "balance_mismatch",
+            "date_inconsistency"
+        ])
+        
+        # Clone l'entrée pour ne pas modifier l'original
+        anomaly_entry = entry.copy()
+        
+        if anomaly_type == "missing_data":
+            # Supprime un champ important
+            field_to_remove = random.choice(["compte_num", "compte_lib", "ecriture_lib"])
+            anomaly_entry[field_to_remove] = ""
+            anomaly_entry["_anomaly_type"] = "missing_data"
+            anomaly_entry["_anomaly_description"] = f"Champ {field_to_remove} manquant"
+            
+        elif anomaly_type == "incorrect_format":
+            # Format incorrect dans un champ
+            anomaly_entry["compte_num"] = f"X{anomaly_entry['compte_num'][1:]}"
+            anomaly_entry["_anomaly_type"] = "incorrect_format"
+            anomaly_entry["_anomaly_description"] = "Format de compte incorrect"
+            
+        elif anomaly_type == "duplicate_entry":
+            # Pas de modification, sera dupliqué lors de la génération
+            anomaly_entry["_anomaly_type"] = "duplicate_entry"
+            anomaly_entry["_anomaly_description"] = "Entrée dupliquée"
+            
+        elif anomaly_type == "balance_mismatch":
+            # Déséquilibre entre débit et crédit
+            if anomaly_entry["debit_montant"] > 0:
+                anomaly_entry["debit_montant"] += random.uniform(0.01, 10)
+            else:
+                anomaly_entry["credit_montant"] += random.uniform(0.01, 10)
+                
+            anomaly_entry["_anomaly_type"] = "balance_mismatch"
+            anomaly_entry["_anomaly_description"] = "Déséquilibre débit/crédit"
+            
+        elif anomaly_type == "date_inconsistency":
+            # Incohérence de dates
+            piece_date = datetime.strptime(anomaly_entry["piece_date"], "%Y-%m-%d")
+            modified_date = piece_date - timedelta(days=random.randint(30, 60))
+            anomaly_entry["piece_date"] = modified_date.strftime("%Y-%m-%d")
+            
+            anomaly_entry["_anomaly_type"] = "date_inconsistency"
+            anomaly_entry["_anomaly_description"] = "Incohérence de date pièce/écriture"
+        
+        return anomaly_entry
+    
+    def generate_entries(self, count: int = 1000) -> List[Dict[str, Any]]:
         """
-        Génère des données FEC synthétiques.
+        Génère un ensemble d'écritures comptables FEC
         
         Args:
-            num_entries: Nombre d'entrées à générer
-            start_date: Date de début (par défaut: il y a un an)
-            end_date: Date de fin (par défaut: aujourd'hui)
-            with_anomalies: Si True, inclut des anomalies volontaires
-            anomaly_rate: Taux d'anomalies à inclure (si with_anomalies=True)
-            company_name: Nom de l'entreprise (généré aléatoirement si None)
+            count: Nombre d'écritures à générer
             
         Returns:
-            Liste de dictionnaires représentant les entrées FEC
-        """
-        # Initialiser les dates par défaut si non fournies
-        if not start_date:
-            start_date = datetime.now() - timedelta(days=365)
-        if not end_date:
-            end_date = datetime.now()
-            
-        # Générer un nom d'entreprise si non fourni
-        if not company_name:
-            prefix = random.choice(self.config["company_prefixes"])
-            company_name = f"{prefix} EXEMPLE {random.randint(1, 999)}"
-        
-        # Appeler votre générateur existant ici
-        # Exemple d'interface avec votre générateur:
-        try:
-            logger.info(f"Génération de {num_entries} entrées FEC pour {company_name}")
-            
-            # ===== VOTRE CODE DE GÉNÉRATION EXISTANT ==================
-            # Cette partie est un placeholder pour l'intégration de votre générateur FEC existant
-            # Remplacez cette section par l'appel à votre générateur
-            
-            # Simulons un appel asynchrone à votre générateur existant
-            await asyncio.sleep(0.1)  # Simule un traitement asynchrone
-            fec_entries = self._generate_mock_fec_data(
-                num_entries, 
-                start_date, 
-                end_date, 
-                company_name,
-                with_anomalies,
-                anomaly_rate
-            )
-            # =========================================================
-            
-            logger.info(f"Génération terminée: {len(fec_entries)} entrées FEC")
-            return fec_entries
-            
-        except Exception as e:
-            logger.error(f"Erreur lors de la génération de données FEC: {str(e)}")
-            # En cas d'erreur, retourner une liste vide
-            return []
-    
-    async def save_fec_file(
-        self, 
-        fec_entries: List[Dict[str, Any]], 
-        output_path: Optional[str] = None,
-        company_name: Optional[str] = None
-    ) -> Tuple[bool, str]:
-        """
-        Sauvegarde les données FEC générées dans un fichier.
-        
-        Args:
-            fec_entries: Données FEC à sauvegarder
-            output_path: Chemin du fichier de sortie (généré si None)
-            company_name: Nom de l'entreprise (pour le nom de fichier si output_path=None)
-            
-        Returns:
-            Tuple (succès, chemin_du_fichier)
-        """
-        if not fec_entries:
-            return False, "Aucune donnée à sauvegarder"
-            
-        # Générer un chemin de sortie si non fourni
-        if not output_path:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            company_str = company_name.replace(" ", "_") if company_name else "entreprise"
-            output_path = os.path.join(self.output_dir, f"FEC_{company_str}_{timestamp}.csv")
-        
-        try:
-            # Créer le dossier parent si nécessaire
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            
-            # Extraire les en-têtes à partir du premier enregistrement
-            fieldnames = list(fec_entries[0].keys())
-            
-            # Écrire le fichier CSV
-            with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter=';')
-                writer.writeheader()
-                writer.writerows(fec_entries)
-            
-            logger.info(f"Fichier FEC sauvegardé: {output_path}")
-            return True, output_path
-            
-        except Exception as e:
-            logger.error(f"Erreur lors de la sauvegarde du fichier FEC: {str(e)}")
-            return False, str(e)
-    
-    async def generate_and_save_fec(
-        self,
-        num_entries: int = 1000,
-        with_anomalies: bool = False,
-        company_name: Optional[str] = None
-    ) -> Tuple[bool, str, List[Dict[str, Any]]]:
-        """
-        Génère et sauvegarde des données FEC en une seule opération.
-        
-        Args:
-            num_entries: Nombre d'entrées à générer
-            with_anomalies: Si True, inclut des anomalies volontaires
-            company_name: Nom de l'entreprise
-            
-        Returns:
-            Tuple (succès, chemin_du_fichier, données_générées)
-        """
-        # Générer les données
-        fec_entries = await self.generate_fec_data(
-            num_entries=num_entries,
-            with_anomalies=with_anomalies,
-            company_name=company_name
-        )
-        
-        if not fec_entries:
-            return False, "Échec de la génération de données", []
-            
-        # Sauvegarder les données
-        success, output_path = await self.save_fec_file(
-            fec_entries=fec_entries,
-            company_name=company_name
-        )
-        
-        return success, output_path, fec_entries
-    
-    def _generate_mock_fec_data(
-        self, 
-        num_entries: int, 
-        start_date: datetime, 
-        end_date: datetime, 
-        company_name: str,
-        with_anomalies: bool,
-        anomaly_rate: float
-    ) -> List[Dict[str, Any]]:
-        """
-        Génère des données FEC de démonstration (à remplacer par votre générateur).
-        
-        Note: Cette fonction est un placeholder pour démontrer l'interface.
-              Elle doit être remplacée par l'appel à votre générateur existant.
+            Liste de dictionnaires représentant les écritures comptables
         """
         entries = []
-        date_range = (end_date - start_date).days
+        entry_count = 0
+        anomalies_count = 0
         
-        # Générer des comptes
-        accounts = {}
-        for prefix in self.config["common_account_prefixes"]:
-            for i in range(1, 6):  # 5 comptes par préfixe
-                account_num = f"{prefix}{i:02d}"
-                accounts[account_num] = f"Compte {account_num}"
+        # Nombre d'anomalies à créer
+        total_anomalies = int(count * self.anomaly_rate)
         
-        # Générer les écritures
-        total_debit = 0
-        total_credit = 0
-        
-        for i in range(1, num_entries + 1):
-            # Déterminer la date de l'écriture
-            random_days = random.randint(0, date_range)
-            ecr_date = start_date + timedelta(days=random_days)
+        while entry_count < count:
+            # Choisir un journal au hasard
+            journal_code = random.choice(list(self.journals.keys()))
+            journal_lib = self.journals[journal_code]
             
-            # Sélectionner un journal
-            journal_code = random.choice(self.config["journal_codes"])
-            journal_lib = {
-                "ACH": "Journal des achats",
-                "VTE": "Journal des ventes",
-                "BNQ": "Journal de banque",
-                "OD": "Opérations diverses",
-                "CAISSE": "Journal de caisse"
-            }.get(journal_code, journal_code)
+            # Générer une date aléatoire
+            transaction_date = self._generate_transaction_date()
             
-            # Numéro d'écriture
-            ecr_num = f"{journal_code}{i:06d}"
+            # Choisir une description appropriée pour ce journal
+            ecriture_lib = random.choice(self.descriptions[journal_code])
             
-            # Sélectionner un compte
-            account_num = random.choice(list(accounts.keys()))
-            account_lib = accounts[account_num]
+            # Générer une référence de pièce comptable
+            piece_ref = f"{journal_code}{transaction_date.strftime('%Y%m')}-{random.randint(1000, 9999)}"
             
-            # Générer un montant (entre 10 et 10000)
-            amount = round(random.uniform(10, 10000), 2)
+            # Obtenir des comptes appropriés pour ce journal
+            debit_account, credit_account = random.choice(self._get_account_pairs(journal_code))
             
-            # Déterminer si c'est un débit ou un crédit
-            is_debit = random.choice([True, False])
-            debit = amount if is_debit else 0
-            credit = 0 if is_debit else amount
+            # Générer un montant approprié
+            amount = self._generate_amount(journal_code)
             
-            # Mettre à jour les totaux
-            total_debit += debit
-            total_credit += credit
-            
-            # Générer une description
-            descriptions = [
-                "Facture client",
-                "Paiement fournisseur",
-                "Virement bancaire",
-                "Frais bancaires",
-                "Loyer mensuel",
-                "Salaire employé",
-                "Charges sociales",
-                "TVA collectée",
-                "TVA déductible",
-                "Achat fournitures"
-            ]
-            description = random.choice(descriptions)
-            
-            # Référence pièce
-            piece_ref = f"PCE{random.randint(1000, 9999)}"
-            piece_date = ecr_date - timedelta(days=random.randint(0, 10))
-            
-            # Créer l'entrée
-            entry = {
-                "JournalCode": journal_code,
-                "JournalLib": journal_lib,
-                "EcritureNum": ecr_num,
-                "EcritureDate": ecr_date.strftime("%Y%m%d"),
-                "CompteNum": account_num,
-                "CompteLib": account_lib,
-                "CompAuxNum": "",
-                "CompAuxLib": "",
-                "PieceRef": piece_ref,
-                "PieceDate": piece_date.strftime("%Y%m%d"),
-                "EcritureLib": description,
-                "Debit": debit,
-                "Credit": credit,
-                "EcritureLet": "",
-                "DateLet": "",
-                "ValidDate": "",
-                "Montantdevise": 0,
-                "Idevise": ""
-            }
-            
-            entries.append(entry)
-        
-        # Ajouter une entrée d'équilibrage si nécessaire
-        if total_debit != total_credit and not with_anomalies:
-            diff = total_debit - total_credit
-            
-            if diff > 0:
-                # Ajouter un crédit
-                entries.append({
-                    "JournalCode": "OD",
-                    "JournalLib": "Opérations diverses",
-                    "EcritureNum": f"OD{num_entries+1:06d}",
-                    "EcritureDate": end_date.strftime("%Y%m%d"),
-                    "CompteNum": "471000",
-                    "CompteLib": "Compte de régularisation",
-                    "CompAuxNum": "",
-                    "CompAuxLib": "",
-                    "PieceRef": f"REG{random.randint(1000, 9999)}",
-                    "PieceDate": end_date.strftime("%Y%m%d"),
-                    "EcritureLib": "Écriture d'équilibrage",
-                    "Debit": 0,
-                    "Credit": diff,
-                    "EcritureLet": "",
-                    "DateLet": "",
-                    "ValidDate": "",
-                    "Montantdevise": 0,
-                    "Idevise": ""
-                })
-            else:
-                # Ajouter un débit
-                entries.append({
-                    "JournalCode": "OD",
-                    "JournalLib": "Opérations diverses",
-                    "EcritureNum": f"OD{num_entries+1:06d}",
-                    "EcritureDate": end_date.strftime("%Y%m%d"),
-                    "CompteNum": "471000",
-                    "CompteLib": "Compte de régularisation",
-                    "CompAuxNum": "",
-                    "CompAuxLib": "",
-                    "PieceRef": f"REG{random.randint(1000, 9999)}",
-                    "PieceDate": end_date.strftime("%Y%m%d"),
-                    "EcritureLib": "Écriture d'équilibrage",
-                    "Debit": abs(diff),
-                    "Credit": 0,
-                    "EcritureLet": "",
-                    "DateLet": "",
-                    "ValidDate": "",
-                    "Montantdevise": 0,
-                    "Idevise": ""
-                })
-        
-        # Introduire des anomalies si demandé
-        if with_anomalies and entries:
-            num_anomalies = int(num_entries * anomaly_rate)
-            
-            for _ in range(num_anomalies):
-                anomaly_type = random.choice([
-                    "missing_data",
-                    "duplicate_entry",
-                    "suspicious_amount",
-                    "date_inconsistency"
-                ])
+            # Créer deux écritures (débit et crédit)
+            for i, (compte_num, is_debit) in enumerate([
+                (debit_account, True),
+                (credit_account, False)
+            ]):
+                compte_lib = self.accounts.get(compte_num, "Compte inconnu")
                 
-                if anomaly_type == "missing_data":
-                    # Sélectionner une entrée aléatoire et supprimer des données
-                    idx = random.randint(0, len(entries) - 1)
-                    field_to_clear = random.choice(["CompteNum", "EcritureLib", "PieceRef"])
-                    entries[idx][field_to_clear] = ""
+                # Informations sur le tiers (client/fournisseur)
+                comp_aux_num = ""
+                comp_aux_lib = ""
                 
-                elif anomaly_type == "duplicate_entry":
-                    # Dupliquer une entrée existante
-                    idx = random.randint(0, len(entries) - 1)
-                    duplicate = entries[idx].copy()
-                    entries.append(duplicate)
+                if compte_num == "401000":  # Fournisseur
+                    comp_aux_num = f"F{random.randint(10000, 99999)}"
+                    comp_aux_lib = random.choice(self.suppliers)
+                elif compte_num == "411000":  # Client
+                    comp_aux_num = f"C{random.randint(10000, 99999)}"
+                    comp_aux_lib = random.choice(self.clients)
                 
-                elif anomaly_type == "suspicious_amount":
-                    # Créer une entrée avec un montant anormalement élevé
-                    idx = random.randint(0, len(entries) - 1)
-                    entries[idx]["Debit"] = entries[idx]["Debit"] * 100 if entries[idx]["Debit"] > 0 else 0
-                    entries[idx]["Credit"] = entries[idx]["Credit"] * 100 if entries[idx]["Credit"] > 0 else 0
+                entry = {
+                    "journal_code": journal_code,
+                    "journal_lib": journal_lib,
+                    "ecr_num": f"ECR{entry_count+1:06d}",
+                    "ecr_date": transaction_date.strftime("%Y-%m-%d"),
+                    "compte_num": compte_num,
+                    "compte_lib": compte_lib,
+                    "comp_aux_num": comp_aux_num,
+                    "comp_aux_lib": comp_aux_lib,
+                    "piece_ref": piece_ref,
+                    "piece_date": transaction_date.strftime("%Y-%m-%d"),
+                    "ecriture_lib": ecriture_lib,
+                    "debit_montant": amount if is_debit else 0,
+                    "credit_montant": 0 if is_debit else amount,
+                    "ecriture_date": transaction_date.strftime("%Y-%m-%d"),
+                    "validation_date": (transaction_date + timedelta(days=random.randint(1, 5))).strftime("%Y-%m-%d") if random.random() > 0.2 else None
+                }
                 
-                elif anomaly_type == "date_inconsistency":
-                    # Créer une incohérence de date
-                    idx = random.randint(0, len(entries) - 1)
-                    # Date d'écriture antérieure à la date de pièce
-                    ecr_date = datetime.strptime(entries[idx]["EcritureDate"], "%Y%m%d")
-                    piece_date = ecr_date + timedelta(days=30)  # Pièce datée d'un mois après l'écriture
-                    entries[idx]["PieceDate"] = piece_date.strftime("%Y%m%d")
+                # Déterminer si on doit injecter une anomalie
+                if anomalies_count < total_anomalies and random.random() < (self.anomaly_rate * 2):
+                    entry = self._inject_anomaly(entry)
+                    anomalies_count += 1
+                    
+                    # Pour les duplications, ajouter l'entrée deux fois
+                    if entry.get("_anomaly_type") == "duplicate_entry":
+                        entries.append(entry)
+                        entry_count += 1
+                
+                entries.append(entry)
+                entry_count += 1
+                
+                # Vérifier si on a atteint le nombre total demandé
+                if entry_count >= count:
+                    break
         
+        logger.info(f"Généré {entry_count} écritures comptables avec {anomalies_count} anomalies")
         return entries
+    
+    def save_to_csv(self, entries: List[Dict[str, Any]], output_path: str) -> str:
+        """
+        Enregistre les écritures générées dans un fichier CSV au format FEC
+        
+        Args:
+            entries: Liste des écritures à enregistrer
+            output_path: Chemin du fichier de sortie
+            
+        Returns:
+            Chemin du fichier créé
+        """
+        os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+        
+        with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
+            # Déterminer les champs à partir des clés du premier élément
+            fieldnames = [k for k in entries[0].keys() if not k.startswith('_')]
+            
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter=';')
+            writer.writeheader()
+            
+            for entry in entries:
+                # Filtrer pour ne pas inclure les métadonnées d'anomalies
+                filtered_entry = {k: v for k, v in entry.items() if not k.startswith('_')}
+                writer.writerow(filtered_entry)
+        
+        logger.info(f"Fichier FEC enregistré: {output_path}")
+        return output_path
+
+
+# Exemple d'utilisation
+if __name__ == "__main__":
+    # Configurer le logger
+    logging.basicConfig(level=logging.INFO)
+    
+    # Créer le générateur
+    generator = FECGenerator(
+        start_date=datetime(2023, 1, 1),
+        end_date=datetime(2023, 12, 31),
+        anomaly_rate=0.05  # 5% d'anomalies
+    )
+    
+    # Générer des écritures
+    entries = generator.generate_entries(count=2000)
+    
+    # Enregistrer au format CSV
+    output_file = "data/generated_fec_sample.csv"
+    generator.save_to_csv(entries, output_file)
 
 
 @lru_cache()

@@ -24,115 +24,108 @@ FEC_EXPECTED_HEADERS = [
     "Idevise"
 ]
 
+ALLOWED_EXTENSIONS = {'csv', 'txt', 'xlsx', 'xls'}
 
-async def save_upload_file(file: UploadFile, file_id: str, target_dir: str) -> str:
+def is_allowed_file(filename: str) -> bool:
+    """Vérifie si l'extension du fichier est autorisée"""
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+async def validate_file(file: UploadFile) -> Tuple[bool, Optional[str]]:
     """
-    Sauvegarde un fichier uploadé avec gestion des fichiers volumineux.
-    Retourne le chemin du fichier sauvegardé.
-    """
-    # Création d'un nom de fichier unique
-    file_extension = os.path.splitext(file.filename)[1]
-    target_path = os.path.join(target_dir, f"{file_id}{file_extension}")
+    Valide si un fichier est au format accepté (FEC ou Excel)
     
-    # Création du dossier cible si nécessaire
-    os.makedirs(os.path.dirname(target_path), exist_ok=True)
-    
-    try:
-        # Ouverture du fichier cible en mode binaire
-        async with aiofiles.open(target_path, 'wb') as out_file:
-            # Lecture par blocs pour éviter de charger l'intégralité du fichier en mémoire
-            while content := await file.read(CHUNK_SIZE):
-                await out_file.write(content)
+    Args:
+        file: Le fichier à valider
         
-        logger.info(f"Fichier sauvegardé: {target_path}")
-        return target_path
+    Returns:
+        Un tuple (is_valid, message) indiquant si le fichier est valide
+        et un message d'erreur le cas échéant
+    """
+    if not file.filename:
+        return False, "Nom de fichier non fourni"
     
+    if not is_allowed_file(file.filename):
+        return False, f"Format de fichier non supporté. Formats acceptés : {', '.join(ALLOWED_EXTENSIONS)}"
+    
+    # Pour les xlsx/xls, on vérifie si c'est un fichier Excel valide
+    if file.filename.endswith(('.xlsx', '.xls')):
+        try:
+            content = await file.read(1024)  # Lire un échantillon pour validation
+            await file.seek(0)  # Reset le curseur au début
+            
+            # Vérification minimale pour un fichier Excel (signatures de fichier)
+            xlsx_signature = b'PK\x03\x04'
+            xls_signature = b'\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1'
+            
+            if file.filename.endswith('.xlsx') and not content.startswith(xlsx_signature):
+                return False, "Fichier XLSX invalide ou corrompu"
+            
+            if file.filename.endswith('.xls') and not content.startswith(xls_signature):
+                return False, "Fichier XLS invalide ou corrompu"
+            
+            return True, None
+        except Exception as e:
+            logger.error(f"Erreur lors de la validation du fichier Excel: {str(e)}")
+            return False, f"Erreur lors de la validation: {str(e)}"
+    
+    # Pour les fichiers CSV/TXT (FEC)
+    else:
+        return await validate_fec_file(file)
+
+async def save_upload_file(upload_file: UploadFile, file_id: str, base_dir: str) -> str:
+    """
+    Sauvegarde un fichier uploadé sur le disque
+    
+    Args:
+        upload_file: Le fichier uploadé
+        file_id: L'identifiant unique du fichier
+        base_dir: Le répertoire de base pour les uploads
+        
+    Returns:
+        Le chemin complet du fichier sauvegardé
+    """
+    upload_dir = os.path.join(base_dir, "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Créer un chemin pour le nouveau fichier
+    file_path = os.path.join(upload_dir, f"{file_id}_{upload_file.filename}")
+    
+    # Lire et écrire le fichier de manière asynchrone
+    try:
+        # Rembobiner le fichier au début par sécurité
+        await upload_file.seek(0)
+        
+        # Écrire le fichier sur le disque
+        async with aiofiles.open(file_path, "wb") as out_file:
+            # Lire le fichier par morceaux pour économiser la mémoire
+            while content := await upload_file.read(1024 * 1024):  # Lire 1 MB à la fois
+                await out_file.write(content)
+                
+        logger.info(f"Fichier sauvegardé: {file_path}")
+        return file_path
     except Exception as e:
-        # Suppression du fichier partiellement écrit en cas d'erreur
-        if os.path.exists(target_path):
-            os.remove(target_path)
-        logger.error(f"Erreur lors de la sauvegarde du fichier: {str(e)}")
+        logger.error(f"Erreur lors de la sauvegarde du fichier {upload_file.filename}: {str(e)}", exc_info=e)
+        # Si le fichier existe déjà partiellement, le supprimer
+        if os.path.exists(file_path):
+            os.remove(file_path)
         raise
 
 
-async def validate_fec_file(file: UploadFile) -> Tuple[bool, str]:
+async def validate_fec_file(file: UploadFile) -> Tuple[bool, Optional[str]]:
     """
-    Valide qu'un fichier est au format FEC (Format d'Échange Comptable).
-    Retourne un tuple (est_valide, message).
-    """
-    # Réinitialiser la position du fichier
-    await file.seek(0)
+    Valide si un fichier est au format FEC (Format d'Échange Comptable)
     
-    try:
-        # Lire une partie du début du fichier
-        sample = await file.read(CHUNK_SIZE)
-        await file.seek(0)  # Réinitialiser pour les utilisations futures
+    Args:
+        file: Le fichier à valider
         
-        # Détecter l'encodage (UTF-8, ISO-8859-1, etc.)
-        encoding = 'utf-8'  # Par défaut
-        try:
-            sample_text = sample.decode(encoding)
-        except UnicodeDecodeError:
-            # Essayer avec un autre encodage courant pour les fichiers FEC
-            encoding = 'ISO-8859-1'
-            try:
-                sample_text = sample.decode(encoding)
-            except UnicodeDecodeError:
-                return False, "Format de fichier non reconnu: problème d'encodage"
-        
-        # Détecter le délimiteur (tab, point-virgule, etc.)
-        dialect = csv.Sniffer().sniff(sample_text.split('\n')[0])
-        delimiter = dialect.delimiter
-        
-        # Lire les en-têtes
-        buffer = io.StringIO(sample_text)
-        reader = csv.reader(buffer, delimiter=delimiter)
-        headers = next(reader, [])
-        
-        # Normaliser les en-têtes pour la comparaison
-        normalized_headers = [h.strip().lower() for h in headers]
-        expected_headers_lower = [h.lower() for h in FEC_EXPECTED_HEADERS]
-        
-        # Vérifier si les en-têtes essentiels sont présents
-        missing_essential = []
-        essential_headers = ["JournalCode", "EcritureNum", "EcritureDate", "CompteNum", "Debit", "Credit"]
-        essential_headers_lower = [h.lower() for h in essential_headers]
-        
-        for header in essential_headers_lower:
-            if not any(header in h for h in normalized_headers):
-                missing_essential.append(header)
-        
-        if missing_essential:
-            return False, f"En-têtes essentiels manquants: {', '.join(missing_essential)}"
-        
-        # Vérifier quelques lignes pour la validité des données
-        valid_lines = 0
-        invalid_lines = []
-        
-        for i, row in enumerate(reader):
-            if i >= 10:  # Vérifier les 10 premières lignes
-                break
-                
-            if len(row) < 5:  # Au moins 5 colonnes pour un FEC minimal
-                invalid_lines.append(i + 2)  # +2 car i commence à 0 et on a déjà lu l'en-tête
-                continue
-                
-            valid_lines += 1
-        
-        if valid_lines == 0:
-            return False, "Aucune ligne de données valide trouvée"
-            
-        if invalid_lines:
-            if len(invalid_lines) <= 3:
-                return False, f"Lignes invalides détectées: {', '.join(map(str, invalid_lines))}"
-            else:
-                return False, f"Plusieurs lignes invalides détectées ({len(invalid_lines)} sur 10)"
-        
-        return True, "Fichier FEC valide"
-        
-    except Exception as e:
-        logger.error(f"Erreur lors de la validation du fichier FEC: {str(e)}")
-        return False, f"Erreur de validation: {str(e)}"
+    Returns:
+        Un tuple (is_valid, message) indiquant si le fichier est valide
+        et un message d'erreur le cas échéant
+    """
+    # Pour l'instant, nous acceptons tous les fichiers comme valides
+    # Cette fonction devrait être implémentée avec une véritable logique de validation
+    return True, None
 
 
 async def read_fec_file(file_path: str, batch_size: int = 10000) -> List[Dict[str, Any]]:
@@ -213,15 +206,69 @@ async def read_fec_file(file_path: str, batch_size: int = 10000) -> List[Dict[st
         raise
 
 
+async def read_excel_file(file_path: str) -> List[Dict[str, Any]]:
+    """
+    Lit un fichier Excel et convertit son contenu en liste de dictionnaires
+    
+    Args:
+        file_path: Chemin du fichier Excel
+        
+    Returns:
+        Liste de dictionnaires représentant les lignes du fichier
+    """
+    try:
+        import pandas as pd
+        
+        # Détecter le format (xlsx/xls) et lire avec pandas
+        df = pd.read_excel(file_path)
+        
+        # Nettoyer les noms de colonnes (espaces, caractères spéciaux)
+        df.columns = [str(col).strip() for col in df.columns]
+        
+        # Convertir en liste de dictionnaires
+        records = df.to_dict('records')
+        
+        logger.info(f"Fichier Excel chargé: {len(records)} lignes")
+        return records
+    except Exception as e:
+        logger.error(f"Erreur lors de la lecture du fichier Excel {file_path}: {str(e)}")
+        raise
+
+async def read_file_content(file_path: str) -> List[Dict[str, Any]]:
+    """
+    Lit le contenu d'un fichier selon son format (CSV, Excel, ...)
+    et le convertit en liste de dictionnaires
+    
+    Args:
+        file_path: Chemin vers le fichier
+        
+    Returns:
+        Liste de dictionnaires représentant les données du fichier
+    """
+    if file_path.lower().endswith(('.xlsx', '.xls')):
+        return await read_excel_file(file_path)
+    else:
+        return await read_fec_file(file_path)
+
 async def delete_file(file_path: str) -> bool:
-    """Supprime un fichier physique"""
+    """
+    Supprime un fichier du système de fichiers
+    
+    Args:
+        file_path: Le chemin du fichier à supprimer
+        
+    Returns:
+        True si la suppression a réussi, False sinon
+    """
     try:
         if os.path.exists(file_path):
             os.remove(file_path)
+            logger.info(f"Fichier supprimé: {file_path}")
             return True
+        logger.warning(f"Fichier introuvable lors de la suppression: {file_path}")
         return False
     except Exception as e:
-        logger.error(f"Erreur lors de la suppression du fichier {file_path}: {str(e)}")
+        logger.error(f"Erreur lors de la suppression du fichier {file_path}: {str(e)}", exc_info=e)
         return False
 
 

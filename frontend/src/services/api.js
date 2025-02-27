@@ -1,214 +1,124 @@
 import axios from 'axios';
 
-// Configurez ici votre URL de base pour l'API
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+// Configuration de l'API
+const API_BASE_URL = 'http://localhost:8000/api/v1';
 
-// Crée une instance d'axios avec des configurations par défaut
+// Configuration de base d'axios
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
-  timeout: 30000, // 30 secondes pour les requêtes normales
+  // Important: Set to false when using wildcard CORS
+  withCredentials: false,
 });
 
-// Instance d'axios spécifique pour les uploads de fichiers
-const fileApi = axios.create({
-  baseURL: BASE_URL,
-  timeout: 600000, // 10 minutes pour les uploads de fichiers volumineux
+// Intercepteurs pour le debugging avec plus de détails
+api.interceptors.request.use(request => {
+  console.log('Starting Request:', {
+    url: request.url,
+    method: request.method,
+    headers: request.headers,
+    data: request.data
+  });
+  return request;
+}, error => {
+  console.error('Request Error:', error);
+  return Promise.reject(error);
 });
 
-// Gestion globale des erreurs
-const handleApiError = (error) => {
-  if (error.response) {
-    // La requête a été faite et le serveur a répondu avec un code d'erreur
-    console.error('Erreur API:', error.response.data);
-    return {
-      error: true,
-      status: error.response.status,
-      message: error.response.data.message || 'Une erreur est survenue',
-      details: error.response.data.details || {},
+api.interceptors.response.use(
+  response => {
+    console.log('Response:', {
+      status: response.status,
+      data: response.data,
+      headers: response.headers
+    });
+    return response;
+  },
+  error => {
+    console.error('API Error:', {
+      message: error.message,
+      response: error.response ? {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        headers: error.response.headers
+      } : null,
+      request: error.request,
+      config: error.config
+    });
+    
+    // Format d'erreur standardisé pour l'UI
+    const formattedError = {
+      message: error.response?.data?.message || error.message || "Une erreur s'est produite",
+      status: error.response?.status || 500,
+      details: error.response?.data?.details || {},
+      isAxiosError: true
     };
-  } else if (error.request) {
-    // La requête a été faite mais aucune réponse n'a été reçue
-    console.error('Erreur réseau:', error.request);
-    return {
-      error: true,
-      status: 0,
-      message: 'Impossible de communiquer avec le serveur',
-      details: { network: true },
-    };
-  } else {
-    // Une erreur s'est produite lors de la configuration de la requête
-    console.error('Erreur de configuration:', error.message);
-    return {
-      error: true,
-      status: 0,
-      message: 'Erreur de configuration de la requête',
-      details: { message: error.message },
-    };
+    
+    return Promise.reject(formattedError);
   }
-};
+);
 
-// Services API pour l'analyse
-const analysisService = {
-  // Upload d'un fichier FEC
-  uploadFile: async (file, description = '') => {
+export const analysisService = {
+  uploadFile: async (file, description) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (description) {
+      formData.append('description', description);
+    }
+
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      if (description) {
-        formData.append('description', description);
-      }
-      
-      const response = await fileApi.post('/analysis/upload', formData, {
+      const response = await axios.post(`${API_BASE_URL}/analysis/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        onUploadProgress: (progressEvent) => {
-          // Vous pouvez utiliser cette fonction pour suivre la progression
-          const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          );
-          console.log(`Progression de l'upload: ${percentCompleted}%`);
-        },
+        // Override withCredentials for upload
+        withCredentials: false,
       });
-      
       return response.data;
     } catch (error) {
-      return handleApiError(error);
+      console.error('Upload error:', error);
+      throw error;
     }
   },
-  
-  // Démarrer une analyse
-  startAnalysis: async (fileId, analysisType = 'standard', options = {}) => {
-    try {
-      const response = await api.post('/analysis/start', {
-        file_id: fileId,
-        analysis_type: analysisType,
-        options: options,
-      });
-      
-      return response.data;
-    } catch (error) {
-      return handleApiError(error);
-    }
+
+  startAnalysis: async (fileId, options = {}) => {
+    const response = await api.post('/analysis/start', {
+      file_id: fileId,
+      options,
+    });
+    return response.data;
   },
-  
-  // Vérifier le statut d'une analyse
-  checkAnalysisStatus: async (jobId) => {
-    try {
-      const response = await api.get(`/analysis/status/${jobId}`);
-      return response.data;
-    } catch (error) {
-      return handleApiError(error);
-    }
-  },
-  
-  // Récupérer les résultats d'une analyse
+
   getAnalysisResults: async (fileId) => {
-    try {
-      const response = await api.get(`/analysis/results/${fileId}`);
-      return response.data;
-    } catch (error) {
-      return handleApiError(error);
-    }
+    const response = await api.get(`/analysis/results/${fileId}`);
+    return response.data;
   },
-  
-  // Lister les fichiers uploadés
-  listFiles: async (page = 1, pageSize = 20) => {
-    try {
-      const response = await api.get('/analysis/files', {
-        params: { page, page_size: pageSize },
-      });
-      return response.data;
-    } catch (error) {
-      return handleApiError(error);
-    }
-  },
-  
-  // Supprimer un fichier
-  deleteFile: async (fileId) => {
-    try {
-      const response = await api.delete(`/analysis/files/${fileId}`);
-      return { success: true };
-    } catch (error) {
-      return handleApiError(error);
-    }
+
+  listFiles: async () => {
+    const response = await api.get('/analysis/files');
+    return response.data;
   },
 };
 
-// Services API pour les rapports
-const reportService = {
-  // Générer un rapport
-  generateReport: async (fileId, reportType = 'anomaly_summary', options = {}) => {
-    try {
-      const response = await api.post('/reports/generate', {
-        file_id: fileId,
-        report_type: reportType,
-        options: options,
-      });
-      
-      return response.data;
-    } catch (error) {
-      return handleApiError(error);
-    }
+export const reportService = {
+  generateReport: async (fileId, reportType, options = {}) => {
+    const response = await api.post('/reports/generate', {
+      file_id: fileId,
+      report_type: reportType,
+      options,
+    });
+    return response.data;
   },
-  
-  // Vérifier le statut d'un rapport
-  checkReportStatus: async (jobId) => {
-    try {
-      const response = await api.get(`/reports/status/${jobId}`);
-      return response.data;
-    } catch (error) {
-      return handleApiError(error);
-    }
-  },
-  
-  // Récupérer un rapport
-  getReport: async (reportId) => {
-    try {
-      const response = await api.get(`/reports/${reportId}`);
-      return response.data;
-    } catch (error) {
-      return handleApiError(error);
-    }
+
+  listReports: async (fileId = null) => {
+    const params = fileId ? { file_id: fileId } : {};
+    const response = await api.get('/reports/list', { params });
+    return response.data;
   },
 };
 
-// Services API pour la génération FEC
-const fecGenerationService = {
-  // Générer des données FEC
-  generateFecData: async (params = {}) => {
-    try {
-      const response = await api.post('/fec/generate', params);
-      return response.data;
-    } catch (error) {
-      return handleApiError(error);
-    }
-  },
-  
-  // Télécharger un fichier FEC généré
-  downloadGeneratedFec: async (fileId) => {
-    try {
-      const response = await fileApi.get(`/fec/download/${fileId}`, {
-        responseType: 'blob',
-      });
-      
-      // Créer un URL pour le téléchargement
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `fec_${fileId}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      
-      return { success: true };
-    } catch (error) {
-      return handleApiError(error);
-    }
-  },
-};
-
-export { api, fileApi, analysisService, reportService, fecGenerationService };
+export default api;
